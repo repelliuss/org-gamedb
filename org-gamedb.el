@@ -108,7 +108,7 @@ Append guid field if INCLUDE-GUID is non-nil."
 (defun org-gamedb--search-or-get-p (resource)
   "Return t if RESOURCE requires a guid, otherwise nil.
 Giant Bomb API takes a guid iff requested resource doesn't end with 's."
-  (eql (aref resource (- (length resource) 1)) ?s))
+  (not (eql (aref resource (- (length resource) 1)) ?s)))
 
 (defun org-gamedb--encode-url (resource filter-val &optional guid)
   "Return a request url to Giant Bomb.
