@@ -1,4 +1,4 @@
-;;; org-gamedb.el --- An GiantBomb API client to work with Emacs org-mode -*- lexical-binding: t; -*-
+;;; org-gamedb.el --- A Giant Bomb API client to work with Emacs org-mode -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 repelliuss
 ;;
@@ -15,7 +15,7 @@
 ;;
 ;;; Commentary:
 ;;
-;;  An GiantBomb API client to work with Emacs org-mod
+;;  A Giant Bomb API client to work with Emacs org-mode
 ;;
 ;;; Code:
 
