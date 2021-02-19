@@ -19,6 +19,9 @@
 ;;
 ;;; Code:
 
+(require 'dash)
+(require 'json)
+(require 'url)
 
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs org-mode."
@@ -91,5 +94,51 @@ in all resources."
 
 (defconst org-gamedb--request-format "json"
   "Response format of API.")
+
+(defun org-gamedb--encode-field-list (fields &optional include-guid)
+  "Return a string of FIELDS seperated by a comma for request URL.
+Append guid field if INCLUDE-GUID is non-nil."
+  (let ((encoded (--reduce (format "%s,%s" acc it) fields)))
+    (if include-guid
+        (format "%s,%s"
+                encoded
+                ",guid")
+      encoded)))
+
+(defun org-gamedb--search-or-get-p (resource)
+  "Return t if RESOURCE requires a guid, otherwise nil.
+Giant Bomb API takes a guid iff requested resource doesn't end with 's."
+  (eql (aref resource (- (length resource) 1)) ?s))
+
+(defun org-gamedb--encode-url (resource filter-val &optional guid)
+  "Return a request url to Giant Bomb.
+RESOURCE is interested category about games.
+See URL `https://www.giantbomb.com/api/documentation/' for available resources.
+
+FILTER-VAL is value taken from user to filter query with
+`org-gamedb-filter-field'.
+
+A GUID is required if given resource is for search purposes, decided by
+`org-gamedb--search-or-get-p'."
+  (if (org-gamedb--search-or-get-p resource)
+      (format "%s%s/%s/?api_key=%s&format=%s&sort=%s&field_list=%s&filter=%s:%s"
+              org-gamedb--api-url
+              resource
+              guid
+              org-gamedb-api-key
+              org-gamedb--request-format
+              org-gamedb-candidate-sort
+              (org-gamedb--encode-field-list org-gamedb-field-query-list)
+              org-gamedb-filter-field
+              filter-val)
+    (format "%s%s/?api_key=%s&format=%s&sort=%s&field_list=%s&filter=%s:%s"
+            org-gamedb--api-url
+            resource
+            org-gamedb-api-key
+            org-gamedb--request-format
+            org-gamedb-candidate-sort
+            (org-gamedb--encode-field-list org-gamedb-field-query-list)
+            org-gamedb-filter-field
+            filter-val)))
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
