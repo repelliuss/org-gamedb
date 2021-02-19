@@ -88,5 +88,8 @@ in all resources."
 
 (defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
   "Base URL of API.")
+
+(defconst org-gamedb--request-format "json"
+  "Response format of API.")
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
