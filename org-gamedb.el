@@ -142,5 +142,31 @@ A GUID is required if given resource is for search purposes, decided by
             field-list
             org-gamedb-filter-field
             filter-val)))
+
+(defun org-gamedb--on-success (data)
+  (with-output-to-temp-buffer "*rps*"
+    (pp (cdr (assq 'results data)))))
+
+(defun org-gamedb--handle-request (status)
+  (cond
+   ((plist-member status :error)
+    (error (buffer-substring (search-forward " " nil nil 2) (point-at-eol))))
+   ((not (search-forward "\n\n" nil t))
+    (error "Missing headers, bad response!"))
+   (t (let ((data (json-read)))
+        (kill-buffer (current-buffer))
+        (org-gamedb--on-success data)))))
+
+(defun org-gamedb--mk-request (resource name)
+  (let ((url-request-method "GET"))
+    (url-retrieve (org-gamedb--encode-url resource name
+                                          (org-gamedb--encode-field-list
+                                           org-gamedb-field-query-list t))
+                  (lambda (status)
+                    (org-gamedb--handle-request status))
+                  nil
+                  'silent
+                  'inhibit-cookies)))
+
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
