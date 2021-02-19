@@ -110,7 +110,7 @@ Append guid field if INCLUDE-GUID is non-nil."
 Giant Bomb API takes a guid iff requested resource doesn't end with 's."
   (not (eql (aref resource (- (length resource) 1)) ?s)))
 
-(defun org-gamedb--encode-url (resource filter-val &optional guid)
+(defun org-gamedb--encode-url (resource filter-val field-list &optional guid)
   "Return a request url to Giant Bomb.
 RESOURCE is interested category about games.
 See URL `https://www.giantbomb.com/api/documentation/' for available resources.
@@ -118,9 +118,11 @@ See URL `https://www.giantbomb.com/api/documentation/' for available resources.
 FILTER-VAL is value taken from user to filter query with
 `org-gamedb-filter-field'.
 
+FIELD-LIST is list of fields to fetch.
+
 A GUID is required if given resource is for search purposes, decided by
-`org-gamedb--search-or-get-p'."
-  (if (org-gamedb--search-or-get-p resource)
+`org-gamedb--require-guid-p'."
+  (if (org-gamedb--require-guid-p resource)
       (format "%s%s/%s/?api_key=%s&format=%s&sort=%s&field_list=%s&filter=%s:%s"
               org-gamedb--api-url
               resource
@@ -128,7 +130,7 @@ A GUID is required if given resource is for search purposes, decided by
               org-gamedb-api-key
               org-gamedb--request-format
               org-gamedb-candidate-sort
-              (org-gamedb--encode-field-list org-gamedb-field-query-list)
+              field-list
               org-gamedb-filter-field
               filter-val)
     (format "%s%s/?api_key=%s&format=%s&sort=%s&field_list=%s&filter=%s:%s"
@@ -137,7 +139,7 @@ A GUID is required if given resource is for search purposes, decided by
             org-gamedb-api-key
             org-gamedb--request-format
             org-gamedb-candidate-sort
-            (org-gamedb--encode-field-list org-gamedb-field-query-list)
+            field-list
             org-gamedb-filter-field
             filter-val)))
 (provide 'org-gamedb)
