@@ -46,7 +46,7 @@ fields. It is recommended to pick a common field like 'name' though it doesn't
 have to be included in all resources."
   :type 'string)
 
-(defcustom org-gamedb-field-list '(name original_release_date)
+(defcustom org-gamedb-field-query-list '(name original_release_date)
   "Fetched fields for all queries.
 If there is more than one resource for a query, then user is prompted to select
 a resource from candidates. Candidates will have these fields as information
