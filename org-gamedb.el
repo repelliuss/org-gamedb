@@ -86,5 +86,7 @@ It is recommended to pick common fields though it doesn't have to be included
 in all resources."
   :type '(repeat :tag "Field" symbol))
 
+(defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
+  "Base URL of API.")
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
