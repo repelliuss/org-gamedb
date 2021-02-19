@@ -74,9 +74,9 @@ have to be included in all resources."
   "Inserts an image if t wherever possible."
   :type 'boolean)
 
-(defcustom org-gamedb-property-list
+(defcustom org-gamedb-field-property-list
   '(description original_game_rating original_release_date)
-  "Properties that will be inserted to org-header for a query.
+  "Fields that will be inserted as properties to org-header for a query.
 These fields will be fetched and inserted to the property drawer of org header
 named with value of 'name' field of result if there is one.
 
