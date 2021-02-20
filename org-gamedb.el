@@ -177,9 +177,9 @@ A GUID is required if given resource is for search purposes, decided by
         (kill-buffer (current-buffer))
         (org-gamedb--on-success data))))) ; TODO: check error in json obj
 
-(defun org-gamedb--mk-request (resource name)
+(defun org-gamedb--mk-request (resource query)
   (let ((url-request-method "GET"))
-    (url-retrieve (org-gamedb--encode-url resource name
+    (url-retrieve (org-gamedb--encode-url resource query
                                           (org-gamedb--encode-field-list
                                            org-gamedb-field-query-list t))
                   (lambda (status)
