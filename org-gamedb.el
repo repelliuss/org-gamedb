@@ -168,11 +168,15 @@ A GUID is required if given resource is for search purposes, decided by
             org-gamedb-filter-field
             filter-val)))
 
-(defun org-gamedb--on-success (data)
+(defun org-gamedb--on-success-query (data)
   (with-output-to-temp-buffer "*rps*"
-    (pp (cdr (assq 'results data)))))
+    (pp data)))
 
-(defun org-gamedb--handle-request (status)
+(defun org-gamedb--on-success-get (data)
+  (with-output-to-temp-buffer "*rps*"
+    (pp data)))
+
+(defun org-gamedb--handle-request (status callback)
   (cond
    ((plist-member status :error)
     (error (buffer-substring (search-forward " " nil nil 2) (point-at-eol))))
@@ -180,18 +184,27 @@ A GUID is required if given resource is for search purposes, decided by
     (error "Missing headers, bad response!"))
    (t (let ((data (json-read)))
         (kill-buffer (current-buffer))
-        (org-gamedb--on-success data))))) ; TODO: check error in json obj
+        (if (= (cdr (assq 'status_code data)) 1)
+            (funcall callback data)
+          (error (assq 'error data))))))) ; TODO: check error in json obj
 
-(defun org-gamedb--mk-request (resource query)
-  (let ((url-request-method "GET"))
-    (url-retrieve (org-gamedb--encode-url resource query
-                                          (org-gamedb--encode-field-list
-                                           org-gamedb-field-query-list t))
-                  (lambda (status)
-                    (org-gamedb--handle-request status))
-                  nil
-                  'silent
-                  'inhibit-cookies)))
+(defun org-gamedb--mk-request (resource query type &optional guid)
+  (let ((url-request-method "GET")
+        (field-list)
+        (cbargs))
+    (if (eq type 'get)
+        (setq field-list (org-gamedb--encode-field-list
+                          org-gamedb-field-property-list)
+              cbargs '(org-gamedb--on-success-get))
+      (setq field-list (org-gamedb--encode-field-list
+                        org-gamedb-field-query-list t)
+            cbargs '(org-gamedb--on-success-query)))
+    (url-retrieve
+     (org-gamedb--encode-url resource query field-list guid)
+     #'org-gamedb--handle-request
+     cbargs
+     'silent
+     'inhibit-cookies)))
 
 (defun org-gamedb--get-query ()
   "Return input query for the next resource query."
@@ -214,7 +227,7 @@ URL `https://www.giantbomb.com/api/documentation/'."
                           org-gamedb--resource-list
                           nil t)
          (org-gamedb--get-query)))
-  (org-gamedb--mk-request resource query))
+  (org-gamedb--mk-request resource query 'query))
 
 (defun org-gamedb-games-query (query)
   "Make a QUERY to games resource.
@@ -222,7 +235,7 @@ QUERY is a string and can be anything. Example queries are \"quantic\" for
 companies and \"stardew\" for games."
   (interactive
    (list (org-gamedb--get-query)))
-  (org-gamedb--mk-request "games" query))
+  (org-gamedb--mk-request "games" query 'query))
 
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
