@@ -95,6 +95,13 @@ in all resources."
 (defconst org-gamedb--request-format "json"
   "Response format of API.")
 
+(defconst org-gamedb--resource-list
+  '(accessories characters companies concepts dlcs games
+                game_ratings locations objects people platforms promos
+                rating_boards regions releases reviews themes user_reviews
+                videos video_categories video_shows)
+  "List of resources to query.")
+
 (defun org-gamedb--encode-field-list (fields &optional include-guid)
   "Return a string of FIELDS seperated by a comma for request URL.
 Append guid field if INCLUDE-GUID is non-nil."
