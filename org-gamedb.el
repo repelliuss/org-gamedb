@@ -82,6 +82,11 @@ have to be included in all resources."
   "Inserts an image if t wherever possible."
   :type 'boolean)
 
+(defcustom org-gamedb-use-org-header t
+  "Try to query org header if non-nil.
+Otherwise always prompt the query."
+  :type 'boolean)
+
 (defcustom org-gamedb-field-property-list
   '(description original_game_rating original_release_date)
   "Fields that will be inserted as properties to org-header for a query.
