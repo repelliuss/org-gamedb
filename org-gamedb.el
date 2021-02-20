@@ -22,6 +22,7 @@
 (require 'dash)
 (require 'json)
 (require 'url)
+(require 'org)
 
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs org-mode."
