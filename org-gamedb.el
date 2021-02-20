@@ -38,17 +38,21 @@ URL `https://www.giantbomb.com/api/' . See 'Terms of Use'."
   :link '(url-link :tag "Get an API key" "https://www.giantbomb.com/api/")
   :type 'string)
 
-(defcustom org-gamedb-candidate-sort "name:asc"
+(defcustom org-gamedb-candidate-sort '((original_release_date . desc)
+                                       (name . asc))
   "How results are sorted by for all queries.
-If there is more than one resource result for a query, then candidates will be
-sorted by a field according to this variable iff queried resource has the field
-and supports sorting.
+If there are more than one result for a query, then candidates will be
+sorted by the first field according to its value iff the queried resource has
+that field and supports sorting for it.
 
-Available values are in this form: 'field:order' where order is either 'asc' or
-'desc'. See URL `https://www.giantbomb.com/api/documentation/' for available
-fields. It is recommended to pick a common field like 'name' though it doesn't
-have to be included in all resources."
-  :type 'string)
+Available values are in this form: '(field . order)' where field is one of the
+fields for resources and order is either 'asc' or 'desc'.
+See URL `https://www.giantbomb.com/api/documentation/' for available fields.
+It is recommended to pick a common field like 'name' though it doesn't have to
+be included in all resources."
+  :type '(repeat :tag "Alist" (cons :tag "Field" symbol
+                                    (choice (const asc)
+                                            (const desc)))))
 
 (defcustom org-gamedb-field-query-list '(name original_release_date)
   "Fetched fields for all queries.
@@ -120,6 +124,12 @@ end with 's."
   (not (or (eql (aref resource (- (length resource) 1)) ?s)
            (string= "people" resource))))
 
+(defun org-gamedb--encode-candidate-sort ()
+  "Return a sort value for a request to API."
+  (let ((encoded ""))
+    (dolist (element (reverse org-gamedb-candidate-sort) encoded)
+      (setf encoded (concat encoded (format "%s:%s," (car element) (cdr element)))))))
+
 (defun org-gamedb--encode-url (resource filter-val field-list &optional guid)
   "Return a request url to Giant Bomb.
 RESOURCE is interested category about games.
@@ -139,7 +149,7 @@ A GUID is required if given resource is for search purposes, decided by
               guid
               org-gamedb-api-key
               org-gamedb--request-format
-              org-gamedb-candidate-sort
+              (org-gamedb--encode-candidate-sort)
               field-list
               org-gamedb-filter-field
               filter-val)
@@ -148,7 +158,7 @@ A GUID is required if given resource is for search purposes, decided by
             resource
             org-gamedb-api-key
             org-gamedb--request-format
-            org-gamedb-candidate-sort
+            (org-gamedb--encode-candidate-sort)
             field-list
             org-gamedb-filter-field
             filter-val)))
