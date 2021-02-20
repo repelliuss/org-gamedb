@@ -110,7 +110,7 @@ in all resources."
 (defun org-gamedb--encode-field-list (fields &optional include-guid)
   "Return a string of FIELDS seperated by a comma for request URL.
 Append guid field if INCLUDE-GUID is non-nil."
-  (let ((encoded (--reduce (format "%s,%s" acc it) fields)))
+  (let ((encoded (--reduce (format "%s,%s" acc it) fields))) ; TODO: remove if no more dash
     (if include-guid
         (format "%s,%s"
                 encoded
@@ -175,7 +175,7 @@ A GUID is required if given resource is for search purposes, decided by
     (error "Missing headers, bad response!"))
    (t (let ((data (json-read)))
         (kill-buffer (current-buffer))
-        (org-gamedb--on-success data)))))
+        (org-gamedb--on-success data))))) ; TODO: check error in json obj
 
 (defun org-gamedb--mk-request (resource name)
   (let ((url-request-method "GET"))
