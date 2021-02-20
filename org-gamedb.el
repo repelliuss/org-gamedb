@@ -193,5 +193,36 @@ A GUID is required if given resource is for search purposes, decided by
                   'silent
                   'inhibit-cookies)))
 
+(defun org-gamedb--get-query ()
+  "Return input query for the next resource query."
+  (if org-gamedb-use-org-header
+      (let ((heading (org-entry-get nil "ITEM")))
+        (if heading
+            heading
+          (read-string "Query: ")))
+    (read-string "Query: ")))
+
+(defun org-gamedb-query (resource query)
+  "Make a QUERY to RESOURCE.
+QUERY is a string and can be anything. Example queries are \"quantic\" for
+companies and \"stardew\" for games.
+
+RESOURCE is a resource defined by API. See available resources at
+URL `https://www.giantbomb.com/api/documentation/'."
+  (interactive
+   (list (completing-read "Pick a resource: "
+                          org-gamedb--resource-list
+                          nil t)
+         (org-gamedb--get-query)))
+  (org-gamedb--mk-request resource query))
+
+(defun org-gamedb-games-query (query)
+  "Make a QUERY to games resource.
+QUERY is a string and can be anything. Example queries are \"quantic\" for
+companies and \"stardew\" for games."
+  (interactive
+   (list (org-gamedb--get-query)))
+  (org-gamedb--mk-request "games" query))
+
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
