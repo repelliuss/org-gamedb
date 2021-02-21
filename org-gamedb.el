@@ -228,6 +228,7 @@ A GUID is required if given resource is for search purposes, decided by
           (read-string "Query: ")))
     (read-string "Query: ")))
 
+;;;###autoload
 (defun org-gamedb-query (resource query)
   "Make a QUERY to RESOURCE.
 QUERY is a string and can be anything. Example queries are \"quantic\" for
@@ -242,6 +243,7 @@ URL `https://www.giantbomb.com/api/documentation/'."
          (org-gamedb--get-query)))
   (org-gamedb--mk-request resource 'query query))
 
+;;;###autoload
 (defun org-gamedb-games-query (query)
   "Make a QUERY to games resource.
 QUERY is a string and can be anything. Example queries are \"quantic\" for
