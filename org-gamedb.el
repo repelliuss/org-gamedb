@@ -88,7 +88,7 @@ Otherwise always prompt the query."
   :type 'boolean)
 
 (defcustom org-gamedb-field-property-list
-  '(deck original_release_date image)
+  '(deck original_release_date)
   "Fields that will be inserted as properties to org-header for a query.
 These fields will be fetched and inserted to the property drawer of org header
 named with value of 'name' field of result if there is one.
@@ -207,7 +207,9 @@ A GUID is required if given resource is for search purposes, decided by
         (cbargs))
     (if (eq type 'get)
         (setq field-list (org-gamedb--encode-field-list
-                          org-gamedb-field-property-list)
+                          (if org-gamedb-include-image
+                              (cons 'image org-gamedb-field-property-list)
+                            org-gamedb-field-property-list))
               cbargs (list #'org-gamedb--on-success-get resource))
       (setq field-list (org-gamedb--encode-field-list
                         org-gamedb-field-query-list t)
