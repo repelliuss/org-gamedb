@@ -135,29 +135,27 @@ end with 's."
     (dolist (element (reverse org-gamedb-candidate-sort) encoded)
       (setf encoded (concat encoded (format "%s:%s," (car element) (cdr element)))))))
 
-(defun org-gamedb--encode-url (resource filter-val field-list &optional guid)
+(defun org-gamedb--encode-url (resource field-list &optional filter-val guid)
   "Return a request url to Giant Bomb.
 RESOURCE is interested category about games.
 See URL `https://www.giantbomb.com/api/documentation/' for available resources.
 
+FIELD-LIST is list of fields to fetch.
+
 FILTER-VAL is value taken from user to filter query with
 `org-gamedb-filter-field'.
-
-FIELD-LIST is list of fields to fetch.
 
 A GUID is required if given resource is for search purposes, decided by
 `org-gamedb--require-guid-p'."
   (if (org-gamedb--require-guid-p resource)
-      (format "%s%s/%s/?api_key=%s&format=%s&sort=%s&field_list=%s&filter=%s:%s"
+      (format "%s%s/%s/?api_key=%s&format=%s&sort=%s&field_list=%s"
               org-gamedb--api-url
               resource
               guid
               org-gamedb-api-key
               org-gamedb--request-format
               (org-gamedb--encode-candidate-sort)
-              field-list
-              org-gamedb-filter-field
-              filter-val)
+              field-list)
     (format "%s%s/?api_key=%s&format=%s&sort=%s&field_list=%s&filter=%s:%s"
             org-gamedb--api-url
             resource
@@ -188,19 +186,20 @@ A GUID is required if given resource is for search purposes, decided by
             (funcall callback data)
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
-(defun org-gamedb--mk-request (resource query type &optional guid)
+;; TODO: make only one request at a time
+(defun org-gamedb--mk-request (resource type &optional query guid)
   (let ((url-request-method "GET")
         (field-list)
         (cbargs))
     (if (eq type 'get)
         (setq field-list (org-gamedb--encode-field-list
                           org-gamedb-field-property-list)
-              cbargs '(org-gamedb--on-success-get))
+              cbargs (list #'org-gamedb--on-success-get resource))
       (setq field-list (org-gamedb--encode-field-list
                         org-gamedb-field-query-list t)
-            cbargs '(org-gamedb--on-success-query)))
+            cbargs (list #'org-gamedb--on-success-query resource)))
     (url-retrieve
-     (org-gamedb--encode-url resource query field-list guid)
+     (org-gamedb--encode-url resource field-list query guid)
      #'org-gamedb--handle-request
      cbargs
      'silent
@@ -227,7 +226,7 @@ URL `https://www.giantbomb.com/api/documentation/'."
                           org-gamedb--resource-list
                           nil t)
          (org-gamedb--get-query)))
-  (org-gamedb--mk-request resource query 'query))
+  (org-gamedb--mk-request resource 'query query))
 
 (defun org-gamedb-games-query (query)
   "Make a QUERY to games resource.
@@ -235,7 +234,7 @@ QUERY is a string and can be anything. Example queries are \"quantic\" for
 companies and \"stardew\" for games."
   (interactive
    (list (org-gamedb--get-query)))
-  (org-gamedb--mk-request "games" query 'query))
+  (org-gamedb--mk-request "games" 'query query))
 
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
