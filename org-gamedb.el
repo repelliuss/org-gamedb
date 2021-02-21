@@ -166,15 +166,29 @@ A GUID is required if given resource is for search purposes, decided by
             org-gamedb-filter-field
             filter-val)))
 
-(defun org-gamedb--on-success-query (data)
+(defun org-gamedb--complement-resource (resource)
+  (if (string= resource "people")
+      "person"
+    (substring resource 0 (- (length resource) 1))))
+
+(defun org-gamedb--on-success-query (data resource)
+  (with-output-to-temp-buffer "*rps*"
+    (pp data)
+    (let ((results-count (cdr (assq 'number_of_total_results data)))
+          (results (cdr (assq 'results data))))
+      (cond
+       ((< results-count 1) (message "No resource found."))
+       ((= results-count 1) (org-gamedb--mk-request
+                             (org-gamedb--complement-resource resource)
+                             'get
+                             nil
+                             (cdr (assq 'guid (aref results 0)))))))))
+
+(defun org-gamedb--on-success-get (data resource)
   (with-output-to-temp-buffer "*rps*"
     (pp data)))
 
-(defun org-gamedb--on-success-get (data)
-  (with-output-to-temp-buffer "*rps*"
-    (pp data)))
-
-(defun org-gamedb--handle-request (status callback)
+(defun org-gamedb--handle-request (status callback resource)
   (cond
    ((plist-member status :error)
     (error (buffer-substring (search-forward " " nil nil 2) (point-at-eol))))
@@ -183,7 +197,7 @@ A GUID is required if given resource is for search purposes, decided by
    (t (let ((data (json-read)))
         (kill-buffer (current-buffer))
         (if (= (cdr (assq 'status_code data)) 1)
-            (funcall callback data)
+            (funcall callback data resource)
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
 ;; TODO: make only one request at a time
