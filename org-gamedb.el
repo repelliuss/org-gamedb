@@ -60,6 +60,7 @@ If there is more than one resource for a query, then user is prompted to select
 a resource from candidates. Candidates will have these fields as information
 seperated by variable `org-gamedb-field-seperator'.
 
+Available fields are whose value is a string.
 For available fields, see URL `https://www.giantbomb.com/api/documentation/'."
   :type '(repeat :tag "Field" symbol))
 
