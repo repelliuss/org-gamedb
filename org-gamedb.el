@@ -135,7 +135,8 @@ end with 's."
   "Return a sort value for a request to API."
   (let ((encoded ""))
     (dolist (element (reverse org-gamedb-candidate-sort) encoded)
-      (setf encoded (concat encoded (format "%s:%s," (car element) (cdr element)))))))
+      (setq encoded
+            (concat encoded (format "%s:%s," (car element) (cdr element)))))))
 
 (defun org-gamedb--encode-url (resource field-list &optional filter-val guid)
   "Return a request url to Giant Bomb.
@@ -184,7 +185,11 @@ A GUID is required if given resource is for search purposes, decided by
                              (org-gamedb--complement-resource resource)
                              'get
                              nil
-                             (cdr (assq 'guid (aref results 0)))))))))
+                             (cdr (assq 'guid (aref results 0)))))
+       (t (org-gamedb--mk-request (org-gamedb--complement-resource resource)
+                                  'get
+                                  nil
+                                  (org-gamedb--prompt-results results)))))))
 
 (defun org-gamedb--on-success-get (data resource)
   (with-output-to-temp-buffer "*rps*"
