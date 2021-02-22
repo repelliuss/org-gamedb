@@ -170,9 +170,14 @@ A GUID is required if given resource is for search purposes, decided by
             filter-val)))
 
 (defun org-gamedb--complement-resource (resource)
-  (if (string= resource "people")
-      "person"
-    (substring resource 0 (- (length resource) 1))))
+  (pcase resource
+    ((pred (string-match "people"))
+     "person")
+    ((and (pred (string-match "\\(.+\\)ies\\'"))
+          (app (match-string 1) singular-root)
+          (let singular (concat singular-root "y")))
+     singular)
+    (plural (substring plural 0 (- (length plural) 1)))))
 
 (defun org-gamedb--on-success-query (data resource)
   (with-output-to-temp-buffer "*rps*"
