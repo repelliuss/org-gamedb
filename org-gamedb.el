@@ -179,6 +179,45 @@ A GUID is required if given resource is for search purposes, decided by
      singular)
     (plural (substring plural 0 (- (length plural) 1)))))
 
+(defun org-gamedb--mk-results-collection (results)
+  (mapcar (lambda (a-result)
+            (let ((info-str (cdr (assq (car org-gamedb-field-query-list)
+                                       a-result))))
+              (dolist (field (cdr org-gamedb-field-query-list) info-str)
+                (setq info-str (concat info-str
+                                       org-gamedb-field-seperator
+                                       (cdr (assq field a-result)))))))
+          results))
+
+(defun org-gamedb--get-guid (choice results)
+  (let ((choice-values (split-string choice org-gamedb-field-seperator)))
+    (cdr
+     (assq 'guid
+           (seq-find (lambda (a-result)
+                       (let ((field (car org-gamedb-field-query-list))
+                             (rest-fields (cdr org-gamedb-field-query-list))
+                             (value (car choice-values))
+                             (rest-values (cdr choice-values)))
+                         (while (and rest-fields
+                                     (string= value (cdr (assq field a-result))))
+                           (setq field (car rest-fields)
+                                 rest-fields (cdr rest-fields)
+                                 value (car rest-values)
+                                 rest-values (cdr rest-values)))
+                         (and (null rest-fields)
+                              (let ((v (cdr (assq field a-result))))
+                                (or (if (null v) (string= value ""))
+                                    (string= value v))))))
+                     results)))))
+
+(defun org-gamedb--prompt-results (results)
+  (let ((this-command 'org-gamedb--prompt-results)) ; fixes counsel-M-x-transformer problem
+    (org-gamedb--get-guid
+     (completing-read "I meant: "
+                      (org-gamedb--mk-results-collection results)
+                      nil t)
+     results)))
+
 (defun org-gamedb--on-success-query (data resource)
   (with-output-to-temp-buffer "*rps*"
     (pp data)
