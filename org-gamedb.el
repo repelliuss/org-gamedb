@@ -115,7 +115,7 @@ in all resources."
   "List of resources to query.")
 
 (defun org-gamedb--encode-field-list (fields)
-  "Return a string of FIELDS seperated by a comma for request URL. "
+  "Return a string of FIELDS seperated by a comma for request URL."
   (--reduce (format "%s,%s" acc it) fields))
 
 (defun org-gamedb--require-guid-p (resource)
@@ -164,6 +164,7 @@ A GUID is required if given resource is for search purposes, decided by
             filter-val)))
 
 (defun org-gamedb--complement-resource (resource)
+  "Take a plural RESOURCE and return its singular endpoint."
   (pcase resource
     ((pred (string-match "people"))
      "person")
@@ -174,6 +175,8 @@ A GUID is required if given resource is for search purposes, decided by
     (plural (substring plural 0 (- (length plural) 1)))))
 
 (defun org-gamedb--mk-results-collection (results)
+  "Construct descriptors for each of RESULTS.
+Return list of strings according to `org-gamedb-field-query-list'."
   (mapcar (lambda (a-result)
             (let ((info-str (cdr (assq (car org-gamedb-field-query-list)
                                        a-result))))
@@ -184,6 +187,7 @@ A GUID is required if given resource is for search purposes, decided by
           results))
 
 (defun org-gamedb--get-guid (choice results)
+  "Take user input CHOICE and all RESULTS and return its guid."
   (let ((choice-values (split-string choice org-gamedb-field-seperator)))
     (cdr
      (assq 'guid
@@ -205,6 +209,9 @@ A GUID is required if given resource is for search purposes, decided by
                      results)))))
 
 (defun org-gamedb--prompt-results (results)
+  "Prompt RESULTS to user and return its guid.
+Each resource appears according to `org-gamedb-field-query-list' and
+`org-gamedb-field-seperator'."
   (let ((this-command 'org-gamedb--prompt-results)) ; fixes counsel-M-x-transformer problem
     (org-gamedb--get-guid
      (completing-read "I meant: "
@@ -213,6 +220,13 @@ A GUID is required if given resource is for search purposes, decided by
      results)))
 
 (defun org-gamedb--on-success-query (data resource)
+  "Handle success DATA taken from RESOURCE endpoint.
+If there is no result notify it.
+If there is one result then gets its GUID and make a second request to get
+values for `org-gamedb-field-property-list'.
+If there is more than one result then prompt user to select one with each
+resource in the form according to `org-gamedb-field-query-list'. Then make
+a second request with selected resource's guid."
   (with-output-to-temp-buffer "*rps*"
     (pp data)
     (let ((results-count (cdr (assq 'number_of_total_results data)))
@@ -234,6 +248,11 @@ A GUID is required if given resource is for search purposes, decided by
     (pp data)))
 
 (defun org-gamedb--handle-request (status callback resource)
+  "Handle request errors and let control to CALLBACK on success.
+STATUS is response to a request returned by `url-retrieve' functions.
+
+CALLBACK is a function with 2 args to call on success with a data and RESOURCE
+endpoint to the request."
   (cond
    ((plist-member status :error)
     (error (buffer-substring (search-forward " " nil nil 2) (point-at-eol))))
@@ -247,6 +266,14 @@ A GUID is required if given resource is for search purposes, decided by
 
 ;; TODO: make only one request at a time
 (defun org-gamedb--mk-request (resource type &optional query guid)
+  "Make a request to RESOURCE endpoint.
+If TYPE is symbol `get' then a GUID is required. This request will try to get
+a single item asynchronously and will make a call to
+`org-gamedb--on-success-get'.
+
+Otherwise a QUERY required. This request will try to get all results with
+`org-gamedb-filter-field' and QUERY as its value to do filtering asyncronously
+and will make a call to `org-gamedb--on-success-query'."
   (let ((url-request-method "GET")
         (field-list)
         (cbargs))
