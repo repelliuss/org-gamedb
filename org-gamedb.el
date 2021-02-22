@@ -114,15 +114,9 @@ in all resources."
                 videos video_categories video_shows)
   "List of resources to query.")
 
-(defun org-gamedb--encode-field-list (fields &optional include-guid)
-  "Return a string of FIELDS seperated by a comma for request URL.
-Append guid field if INCLUDE-GUID is non-nil."
-  (let ((encoded (--reduce (format "%s,%s" acc it) fields))) ; TODO: remove if no more dash
-    (if include-guid
-        (format "%s,%s"
-                encoded
-                ",guid")
-      encoded)))
+(defun org-gamedb--encode-field-list (fields)
+  "Return a string of FIELDS seperated by a comma for request URL. "
+  (--reduce (format "%s,%s" acc it) fields))
 
 (defun org-gamedb--require-guid-p (resource)
   "Return t if RESOURCE requires a guid, otherwise nil.
@@ -259,11 +253,11 @@ A GUID is required if given resource is for search purposes, decided by
     (if (eq type 'get)
         (setq field-list (org-gamedb--encode-field-list
                           (if org-gamedb-include-image
-                              (cons 'image org-gamedb-field-property-list)
+                              (append '(name image) org-gamedb-field-property-list)
                             org-gamedb-field-property-list))
               cbargs (list #'org-gamedb--on-success-get resource))
       (setq field-list (org-gamedb--encode-field-list
-                        org-gamedb-field-query-list t)
+                        (cons 'guid org-gamedb-field-query-list))
             cbargs (list #'org-gamedb--on-success-query resource)))
     (url-retrieve
      (org-gamedb--encode-url resource field-list query guid)
