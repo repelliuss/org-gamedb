@@ -19,6 +19,7 @@
 ;;
 ;;; Code:
 
+;; TODO: If not at org header, open org buffer
 (require 'dash)
 (require 'json)
 (require 'url)
@@ -227,27 +228,38 @@ values for `org-gamedb-field-property-list'.
 If there is more than one result then prompt user to select one with each
 resource in the form according to `org-gamedb-field-query-list'. Then make
 a second request with selected resource's guid."
-  (with-output-to-temp-buffer "*rps*"
-    (pp data)
-    (let ((results-count (cdr (assq 'number_of_total_results data)))
-          (results (cdr (assq 'results data))))
-      (cond
-       ((< results-count 1) (message "No resource found."))
-       ((= results-count 1) (org-gamedb--mk-request
-                             (org-gamedb--complement-resource resource)
-                             'get
-                             nil
-                             (cdr (assq 'guid (aref results 0)))))
-       (t (org-gamedb--mk-request (org-gamedb--complement-resource resource)
-                                  'get
-                                  nil
-                                  (org-gamedb--prompt-results results)))))))
+  (let ((results-count (cdr (assq 'number_of_total_results data)))
+        (results (cdr (assq 'results data))))
+    (cond
+     ((< results-count 1) (message "No resource found."))
+     ((= results-count 1) (org-gamedb--mk-request
+                           (org-gamedb--complement-resource resource)
+                           'get
+                           nil
+                           (cdr (assq 'guid (aref results 0)))))
+     (t (org-gamedb--mk-request (org-gamedb--complement-resource resource)
+                                'get
+                                nil
+                                (org-gamedb--prompt-results results))))))
 
 (defun org-gamedb--on-success-get (data resource)
-  (with-output-to-temp-buffer "*rps*"
-    (pp data)))
+  (let ((results (cdr (assq 'results data))))
+    (dolist (field org-gamedb-field-property-list)
+      (let ((value (cdr (assq field results))))
+        (cond
+         ((or (stringp value)
+              (integerp value))
+          (org-entry-put nil (format "%s" field) value))
+         ((vectorp value)
+          (org-entry-put
+           nil
+           (format "%s" field)
+           (seq-mapcat (lambda (a-value-assoc)
+                         (format "%s " (cdr (assq 'name a-value-assoc))))
+                       value
+                       'string))))))))
 
-(defun org-gamedb--handle-request (status callback resource)
+(defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
 STATUS is response to a request returned by `url-retrieve' functions.
 
@@ -259,9 +271,11 @@ endpoint to the request."
    ((not (search-forward "\n\n" nil t))
     (error "Missing headers, bad response!"))
    (t (let ((data (json-read)))
-        (kill-buffer (current-buffer))
         (if (= (cdr (assq 'status_code data)) 1)
-            (funcall callback data resource)
+            (with-current-buffer (car excursion) ; restore user's buffer
+              (save-excursion                    ; save LATEST point there
+                (goto-char (cdr excursion))      ; goto point where query called
+                (funcall callback data resource)))
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
 ;; TODO: make only one request at a time
@@ -276,16 +290,17 @@ Otherwise a QUERY required. This request will try to get all results with
 and will make a call to `org-gamedb--on-success-query'."
   (let ((url-request-method "GET")
         (field-list)
-        (cbargs))
+        (cbargs `(,resource (,(current-buffer) . ,(point)))))
     (if (eq type 'get)
-        (setq field-list (org-gamedb--encode-field-list
-                          (if org-gamedb-include-image
-                              (append '(name image) org-gamedb-field-property-list)
-                            org-gamedb-field-property-list))
-              cbargs (list #'org-gamedb--on-success-get resource))
+        (progn
+          (setq field-list (org-gamedb--encode-field-list
+                            (if org-gamedb-include-image
+                                (append '(image) org-gamedb-field-property-list)
+                              org-gamedb-field-property-list)))
+          (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
-                        (cons 'guid org-gamedb-field-query-list))
-            cbargs (list #'org-gamedb--on-success-query resource)))
+                        (cons 'guid org-gamedb-field-query-list)))
+      (push #'org-gamedb--on-success-query cbargs))
     (url-retrieve
      (org-gamedb--encode-url resource field-list query guid)
      #'org-gamedb--handle-request
