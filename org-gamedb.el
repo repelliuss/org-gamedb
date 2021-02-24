@@ -90,9 +90,13 @@ have to be included in all resources."
 Otherwise always prompt the query."
   :type 'boolean)
 
+(defcustom org-gamedb-correct-header t
+  "If t, then update the heading with the queried resource's name."
+  :type 'boolean)
+
 (defcustom org-gamedb-field-property-list
-  '(deck original_release_date developers publishers genres themes
-         developed_games)
+  '(original_release_date developers publishers genres themes
+                          developed_games)
   "Fields that will be inserted as properties to org-header for a query.
 These fields will be fetched and inserted to the property drawer of org header
 named with value of 'name' field of result if there is one.
@@ -117,6 +121,16 @@ thumb, tiny, original."
                  (const thumb)
                  (const tiny)
                  (const original)))
+
+(defcustom org-gamedb-descriptor-type 'deck
+  "How detailed will be descriptor.
+`deck' for short, `description' for long descriptors."
+  :type '(choice (const :tag "Short" deck)
+                 (const :tag "Long" description)))
+
+(defcustom org-gamedb-include-descriptor t
+  "Include a descriptor for queried resource with `org-gamedb-descriptor-type'."
+  :type 'boolean)
 
 (defcustom org-gamedb-cache-dir-generator #'org-gamedb--get-cache-dir
   "Function that will return path to cache directory.
@@ -275,39 +289,60 @@ a second request with selected resource's guid."
   "Insert image of queried resource from URL with its NAME as description." ; TODO: improve doc
   (save-excursion
     (let ((beg (goto-char
-               (org-element-property :contents-end (org-element-at-point)))))
+                (org-element-property :contents-end (org-element-at-point)))))
       (if (not org-gamedb-store-images-explicitly)
           (insert (format "\n[[%s][Poster]]\n\n" url))
-       (let* ((dir (funcall org-gamedb-cache-dir-generator))
-              (file-path (concat dir
-                                 name
-                                 (url-file-extension url))))
-         (make-directory dir t)
-         (url-copy-file url file-path t)
-         (insert (format "\n[[file:%s][Poster]]\n\n" file-path))))
-     (org-display-inline-images t t beg (point)))))
+        (let* ((dir (funcall org-gamedb-cache-dir-generator))
+               (file-path (concat dir
+                                  name
+                                  (url-file-extension url))))
+          (make-directory dir t)
+          (url-copy-file url file-path t)
+          (insert (format "\n[[file:%s][Poster]]\n\n" file-path))))
+      (org-display-inline-images t t beg (point)))))
+
+(defun org-gamedb--update-header (name)
+  "Update headline with NAME if at org headline."
+  (when (org-entry-get nil "ITEM")
+    (org-edit-headline name)))
+
+(defun org-gamedb--add-descriptor (descriptor)
+  "Add DESCRIPTOR to the end of heading."
+  (when (org-entry-get nil "ITEM")
+    (save-excursion
+      (org-next-visible-heading 1)
+      (insert (format "%s\n" descriptor)))))
 
 (defun org-gamedb--on-success-get (data _)
   (let ((results (cdr (assq 'results data))))
-    (dolist (field org-gamedb-field-property-list)
-      (let ((value (cdr (assq field results))))
-        (cond
-         ((or (stringp value)
-              (integerp value))
-          (org-entry-put nil (format "%s" field) value))
-         ((vectorp value)
-          (org-entry-put
-           nil
-           (format "%s" field)
-           (seq-mapcat (lambda (a-value-assoc)
-                         (format "%s " (cdr (assq 'name a-value-assoc))))
-                       value
-                       'string))))))
-    (if org-gamedb-include-image
-        (org-gamedb--insert-image
-         (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
-                    (cdr (assq 'image results))))
-         (cdr (assq 'name results))))))
+    (if org-gamedb-field-property-list
+        (dolist (field org-gamedb-field-property-list)
+          (let ((value (cdr (assq field results))))
+            (cond
+             ((or (stringp value)
+                  (integerp value))
+              (org-entry-put nil (format "%s" field) value))
+             ((vectorp value)
+              (org-entry-put
+               nil
+               (format "%s" field)
+               (seq-mapcat (lambda (a-value-assoc)
+                             (format "%s " (cdr (assq 'name a-value-assoc))))
+                           value
+                           'string)))))))
+    (let ((resource-name (cdr (assq 'name results))))
+      (if org-gamedb-correct-header
+          (org-gamedb--update-header
+           resource-name))
+      (if org-gamedb-include-image
+          (org-gamedb--insert-image
+           (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
+                      (cdr (assq 'image results))))
+           resource-name))
+      ;; (if org-gamedb-include-descriptor
+      ;;     (org-gamedb--add-descriptor
+      ;;      (cdr (assq org-gamedb-descriptor-type results))))
+      )))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
@@ -322,12 +357,13 @@ endpoint to the request."
     (error "Missing headers, bad response!"))
    (t (let ((data (json-read)))
         (if (= (cdr (assq 'status_code data)) 1)
-            (with-output-to-temp-buffer "*rps*"
-              (pp data)
-              (with-current-buffer (car excursion) ; restore user's buffer
-                (save-excursion                    ; save LATEST point there
-                  (goto-char (cdr excursion)) ; goto point where query called
-                  (funcall callback data resource))))
+            (with-current-buffer (car excursion) ; restore user's buffer
+              (save-excursion                    ; save LATEST point there
+                (goto-char (cdr excursion)) ; goto point where query called
+                (if (and (org-entry-get nil "ITEM")
+                         (not (org-at-heading-p)))
+                    (org-previous-visible-heading 1))
+                (funcall callback data resource)))
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
 ;; TODO: make only one request at a time
@@ -346,9 +382,8 @@ and will make a call to `org-gamedb--on-success-query'."
     (if (eq type 'get)
         (progn
           (setq field-list (org-gamedb--encode-field-list
-                            (if org-gamedb-include-image
-                                (append '(image name) org-gamedb-field-property-list)
-                              org-gamedb-field-property-list)))
+                            (append `(,org-gamedb-descriptor-type image name)
+                                    org-gamedb-field-property-list)))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
                         (cons 'guid org-gamedb-field-query-list)))
