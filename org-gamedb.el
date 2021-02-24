@@ -127,14 +127,8 @@ thumb, tiny, original."
   "Display inserted image after a query if t."
   :type 'boolean)
 
-(defcustom org-gamedb-descriptor-type 'deck
-  "How detailed will be descriptor.
-`deck' for short, `description' for long descriptors."
-  :type '(choice (const :tag "Short" deck)
-                 (const :tag "Long" description)))
-
 (defcustom org-gamedb-include-descriptor t
-  "Include a descriptor for queried resource with `org-gamedb-descriptor-type'."
+  "Include a descriptor for queried resource."
   :type 'boolean)
 
 (defcustom org-gamedb-cache-dir-generator #'org-gamedb--get-cache-dir
@@ -341,7 +335,7 @@ a second request with selected resource's guid."
            resource-name))
       (if org-gamedb-include-descriptor
           (org-gamedb--add-descriptor
-           (cdr (assq org-gamedb-descriptor-type results))))
+           (cdr (assq 'deck results))))
       (goto-char (point-max)))))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
@@ -378,7 +372,7 @@ and will make a call to `org-gamedb--on-success-query'."
     (if (eq type 'get)
         (progn
           (setq field-list (org-gamedb--encode-field-list
-                            (append `(,org-gamedb-descriptor-type image name)
+                            (append '(deck image name)
                                     org-gamedb-field-property-list)))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
