@@ -311,25 +311,28 @@ a second request with selected resource's guid."
 
 (defun org-gamedb--on-success-get (data _)
   (let ((results (cdr (assq 'results data))))
-    (if org-gamedb-field-property-list
-        (dolist (field org-gamedb-field-property-list)
-          (let ((value (cdr (assq field results))))
-            (cond
-             ((or (stringp value)
-                  (integerp value))
-              (org-entry-put nil (format "%s" field) value))
-             ((vectorp value)
-              (org-entry-put
-               nil
-               (format "%s" field)
-               (seq-mapcat (lambda (a-value-assoc)
-                             (format "%s " (cdr (assq 'name a-value-assoc))))
-                           value
-                           'string)))))))
+    (when org-gamedb-field-property-list
+      (dolist (field org-gamedb-field-property-list)
+        (let ((value (cdr (assq field results))))
+          (cond
+           ((or (stringp value)
+                (integerp value))
+            (org-entry-put nil (format "%s" field) value))
+           ((vectorp value)
+            (org-entry-put
+             nil
+             (format "%s" field)
+             (seq-mapcat (lambda (a-value-assoc)
+                           (format "%s " (cdr (assq 'name a-value-assoc))))
+                         value
+                         'string))))))
+      (org-back-to-heading-or-point-min)
+      (forward-line)
+      (org-cycle))
     (let ((resource-name (cdr (assq 'name results))))
       (if org-gamedb-correct-header
           (org-edit-headline resource-name))
-      (org-end-of-meta-data t)
+      (re-search-forward org-property-end-re)
       (if org-gamedb-include-image
           (org-gamedb--insert-image
            (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
@@ -337,7 +340,8 @@ a second request with selected resource's guid."
            resource-name))
       (if org-gamedb-include-descriptor
           (org-gamedb--add-descriptor
-           (cdr (assq org-gamedb-descriptor-type results)))))))
+           (cdr (assq org-gamedb-descriptor-type results))))
+      (goto-char (point-max)))))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
@@ -358,7 +362,6 @@ endpoint to the request."
                 (funcall callback data resource)))
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
-;; TODO: make only one request at a time
 (defun org-gamedb--mk-request (resource type &optional query guid)
   "Make a request to RESOURCE endpoint.
 If TYPE is symbol `get' then a GUID is required. This request will try to get
