@@ -24,6 +24,7 @@
 (require 'json)
 (require 'url)
 (require 'org)
+(require 'org-element)
 
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs org-mode."
@@ -52,8 +53,8 @@ See URL `https://www.giantbomb.com/api/documentation/' for available fields.
 It is recommended to pick a common field like 'name' though it doesn't have to
 be included in all resources."
   :type '(repeat :tag "Alist" (cons :tag "Field" symbol
-                                    (choice (const asc)
-                                            (const desc)))))
+                                    (choice (const 'asc)
+                                            (const 'desc)))))
 
 (defcustom org-gamedb-field-query-list '(name original_release_date)
   "Fetched fields for all queries.
@@ -102,6 +103,30 @@ It is recommended to pick common fields though it doesn't have to be included
 in all resources."
   :type '(repeat :tag "Field" symbol))
 
+(defcustom org-gamedb-image-type 'medium
+  "Type of image inserted after a query.
+If `org-gamedb-include-image' is t then inserted image will be this type
+Available values are icon, medium, screen, screen_large, small, super,
+thumb, tiny, original."
+  :type '(choice (const icon)
+                 (const medium)
+                 (const screen)
+                 (const screen_large)
+                 (const small)
+                 (const super)
+                 (const thumb)
+                 (const tiny)
+                 (const original)))
+
+(defcustom org-gamedb-cache-dir-generator #'org-gamedb--get-cache-dir
+  "Function that will return path to cache directory.
+Function takes no args."
+  :type 'function)
+
+(defcustom org-gamedb-store-images-explicitly t
+  "Store images at `org-gamedb-cache-dir-generator'."
+  :type 'boolean)
+
 (defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
   "Base URL of API.")
 
@@ -114,6 +139,10 @@ in all resources."
                 rating_boards regions releases reviews themes user_reviews
                 videos video_categories video_shows)
   "List of resources to query.")
+
+(defun org-gamedb--get-cache-dir ()
+  "Return cache directory for images."
+  "~/.cache/org-gamedb/")
 
 (defun org-gamedb--encode-field-list (fields)
   "Return a string of FIELDS seperated by a comma for request URL."
@@ -242,7 +271,23 @@ a second request with selected resource's guid."
                                 nil
                                 (org-gamedb--prompt-results results))))))
 
-(defun org-gamedb--on-success-get (data resource)
+(defun org-gamedb--insert-image (url name)
+  "Insert image of queried resource from URL with its NAME as description." ; TODO: improve doc
+  (save-excursion
+    (let ((beg (goto-char
+               (org-element-property :contents-end (org-element-at-point)))))
+      (if (not org-gamedb-store-images-explicitly)
+          (insert (format "\n[[%s][Poster]]\n\n" url))
+       (let* ((dir (funcall org-gamedb-cache-dir-generator))
+              (file-path (concat dir
+                                 name
+                                 (url-file-extension url))))
+         (make-directory dir t)
+         (url-copy-file url file-path t)
+         (insert (format "\n[[file:%s][Poster]]\n\n" file-path))))
+     (org-display-inline-images t t beg (point)))))
+
+(defun org-gamedb--on-success-get (data _)
   (let ((results (cdr (assq 'results data))))
     (dolist (field org-gamedb-field-property-list)
       (let ((value (cdr (assq field results))))
@@ -257,7 +302,12 @@ a second request with selected resource's guid."
            (seq-mapcat (lambda (a-value-assoc)
                          (format "%s " (cdr (assq 'name a-value-assoc))))
                        value
-                       'string))))))))
+                       'string))))))
+    (if org-gamedb-include-image
+        (org-gamedb--insert-image
+         (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
+                    (cdr (assq 'image results))))
+         (cdr (assq 'name results))))))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
@@ -272,10 +322,12 @@ endpoint to the request."
     (error "Missing headers, bad response!"))
    (t (let ((data (json-read)))
         (if (= (cdr (assq 'status_code data)) 1)
-            (with-current-buffer (car excursion) ; restore user's buffer
-              (save-excursion                    ; save LATEST point there
-                (goto-char (cdr excursion))      ; goto point where query called
-                (funcall callback data resource)))
+            (with-output-to-temp-buffer "*rps*"
+              (pp data)
+              (with-current-buffer (car excursion) ; restore user's buffer
+                (save-excursion                    ; save LATEST point there
+                  (goto-char (cdr excursion)) ; goto point where query called
+                  (funcall callback data resource))))
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
 ;; TODO: make only one request at a time
@@ -295,7 +347,7 @@ and will make a call to `org-gamedb--on-success-query'."
         (progn
           (setq field-list (org-gamedb--encode-field-list
                             (if org-gamedb-include-image
-                                (append '(image) org-gamedb-field-property-list)
+                                (append '(image name) org-gamedb-field-property-list)
                               org-gamedb-field-property-list)))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
