@@ -140,6 +140,10 @@ Function takes no args."
   "Store images at `org-gamedb-cache-dir-generator'."
   :type 'boolean)
 
+(defcustom org-gamedb-always-create-buffer nil
+  "Always create a new buffer for resource contents if t."
+  :type 'boolean)
+
 (defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
   "Base URL of API.")
 
@@ -296,38 +300,56 @@ a second request with selected resource's guid."
                                 (url-file-extension url))))
         (make-directory dir t)
         (url-copy-file url file-path t)
-        (insert (format "\n[[file:%s][Poster]]\n\n" file-path))))
+        (insert (format "\n\n[[file:%s][Poster]]\n" file-path))))
     (if org-gamedb-display-image-after
         (org-display-inline-images t t beg (point)))))
 
 (defun org-gamedb--add-descriptor (descriptor)
   "Add DESCRIPTOR to the end of heading."
-  (insert (format "%s\n" descriptor)))
+  (insert (format "\n%s\n" descriptor)))
+
+(defun org-gamedb--add-property-values (results)
+  "Add values from RESULTS for fields in `org-gamedb-field-property-list'.
+Creates a property drawer and seperates each value with a comma then blank."
+  (dolist (field org-gamedb-field-property-list)
+    (let ((value (cdr (assq field results))))
+      (cond
+       ((or (stringp value)
+            (integerp value))
+        (org-entry-put nil (format "%s" field) value))
+       ((vectorp value)
+        (org-entry-put
+         nil
+         (format "%s" field)
+         (string-remove-suffix
+          ", "
+          (seq-mapcat (lambda (a-value-assoc)
+                        (format "%s, " (cdr (assq 'name a-value-assoc))))
+                      value
+                      'string))))))))
 
 (defun org-gamedb--on-success-get (data _)
-  (let ((results (cdr (assq 'results data))))
-    (when org-gamedb-field-property-list
-      (dolist (field org-gamedb-field-property-list)
-        (let ((value (cdr (assq field results))))
-          (cond
-           ((or (stringp value)
-                (integerp value))
-            (org-entry-put nil (format "%s" field) value))
-           ((vectorp value)
-            (org-entry-put
-             nil
-             (format "%s" field)
-             (seq-mapcat (lambda (a-value-assoc)
-                           (format "%s " (cdr (assq 'name a-value-assoc))))
-                         value
-                         'string))))))
-      (org-back-to-heading-or-point-min)
-      (forward-line)
-      (org-cycle))
-    (let ((resource-name (cdr (assq 'name results))))
+  (let* ((buffer (if (and (org-entry-get nil "ITEM")
+                          (not org-gamedb-always-create-buffer))
+                     (current-buffer)
+                   (pop-to-buffer "*Org GameDB*" nil)))
+         (results (cdr (assq 'results data)))
+         (resource-name (cdr (assq 'name results))))
+    (with-current-buffer buffer
+      (when (string= (buffer-name buffer)  "*Org GameDB*")
+        (org-mode)
+        (goto-char (point-max))
+        (insert (format "* %s\n" resource-name)))
+      (when org-gamedb-field-property-list
+        (org-gamedb--add-property-values results)
+        (org-back-to-heading-or-point-min)
+        (forward-line)
+        (org-cycle))
+      (if org-gamedb-field-property-list
+          (re-search-forward org-property-end-re)
+        (forward-line))
       (if org-gamedb-correct-header
           (org-edit-headline resource-name))
-      (re-search-forward org-property-end-re)
       (if org-gamedb-include-image
           (org-gamedb--insert-image
            (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
