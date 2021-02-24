@@ -19,8 +19,13 @@
 ;;
 ;;; Code:
 
-;; FIXME: if property list is not null but no value found then re search forward
-;; fails
+;;; FIXME: if property list is not null but no value found then re search forward
+;;; fails
+;;; TODO: Add a tag, and value transformer for each property field
+;;; TODO: Add N/A if there is no value in candidate prompt
+;;; TODO: Make a hook for results?
+;;; TODO: Add item checkboxes especially for fields with many values
+
 (require 'dash)
 (require 'json)
 (require 'url)
