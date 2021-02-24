@@ -19,7 +19,8 @@
 ;;
 ;;; Code:
 
-;; TODO: If not at org header, open org buffer
+;; FIXME: if property list is not null but no value found then re search forward
+;; fails
 (require 'dash)
 (require 'json)
 (require 'url)
