@@ -122,6 +122,10 @@ thumb, tiny, original."
                  (const tiny)
                  (const original)))
 
+(defcustom org-gamedb-display-image-after t
+  "Display inserted image after a query if t."
+  :type 'boolean)
+
 (defcustom org-gamedb-descriptor-type 'deck
   "How detailed will be descriptor.
 `deck' for short, `description' for long descriptors."
@@ -285,33 +289,25 @@ a second request with selected resource's guid."
                                 nil
                                 (org-gamedb--prompt-results results))))))
 
+;; FIXME: when there is property
 (defun org-gamedb--insert-image (url name)
   "Insert image of queried resource from URL with its NAME as description." ; TODO: improve doc
-  (save-excursion
-    (let ((beg (goto-char
-                (org-element-property :contents-end (org-element-at-point)))))
-      (if (not org-gamedb-store-images-explicitly)
-          (insert (format "\n[[%s][Poster]]\n\n" url))
-        (let* ((dir (funcall org-gamedb-cache-dir-generator))
-               (file-path (concat dir
-                                  name
-                                  (url-file-extension url))))
-          (make-directory dir t)
-          (url-copy-file url file-path t)
-          (insert (format "\n[[file:%s][Poster]]\n\n" file-path))))
-      (org-display-inline-images t t beg (point)))))
-
-(defun org-gamedb--update-header (name)
-  "Update headline with NAME if at org headline."
-  (when (org-entry-get nil "ITEM")
-    (org-edit-headline name)))
+  (let ((beg (point)))
+    (if (not org-gamedb-store-images-explicitly)
+        (insert (format "\n[[%s][Poster]]\n\n" url))
+      (let* ((dir (funcall org-gamedb-cache-dir-generator))
+             (file-path (concat dir
+                                name
+                                (url-file-extension url))))
+        (make-directory dir t)
+        (url-copy-file url file-path t)
+        (insert (format "\n[[file:%s][Poster]]\n\n" file-path))))
+    (if org-gamedb-display-image-after
+        (org-display-inline-images t t beg (point)))))
 
 (defun org-gamedb--add-descriptor (descriptor)
   "Add DESCRIPTOR to the end of heading."
-  (when (org-entry-get nil "ITEM")
-    (save-excursion
-      (org-next-visible-heading 1)
-      (insert (format "%s\n" descriptor)))))
+  (insert (format "%s\n" descriptor)))
 
 (defun org-gamedb--on-success-get (data _)
   (let ((results (cdr (assq 'results data))))
@@ -332,17 +328,16 @@ a second request with selected resource's guid."
                            'string)))))))
     (let ((resource-name (cdr (assq 'name results))))
       (if org-gamedb-correct-header
-          (org-gamedb--update-header
-           resource-name))
+          (org-edit-headline resource-name))
+      (org-end-of-meta-data t)
       (if org-gamedb-include-image
           (org-gamedb--insert-image
            (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
                       (cdr (assq 'image results))))
            resource-name))
-      ;; (if org-gamedb-include-descriptor
-      ;;     (org-gamedb--add-descriptor
-      ;;      (cdr (assq org-gamedb-descriptor-type results))))
-      )))
+      (if org-gamedb-include-descriptor
+          (org-gamedb--add-descriptor
+           (cdr (assq org-gamedb-descriptor-type results)))))))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
@@ -358,11 +353,8 @@ endpoint to the request."
    (t (let ((data (json-read)))
         (if (= (cdr (assq 'status_code data)) 1)
             (with-current-buffer (car excursion) ; restore user's buffer
-              (save-excursion                    ; save LATEST point there
-                (goto-char (cdr excursion)) ; goto point where query called
-                (if (and (org-entry-get nil "ITEM")
-                         (not (org-at-heading-p)))
-                    (org-previous-visible-heading 1))
+              (save-excursion
+                (goto-char (cdr excursion))         ; goto point where query called
                 (funcall callback data resource)))
           (error (assq 'error data))))))) ; TODO: check error in json obj
 
