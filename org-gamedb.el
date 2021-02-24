@@ -19,12 +19,11 @@
 ;;
 ;;; Code:
 
-;;; FIXME: if property list is not null but no value found then re search forward
-;;; fails
 ;;; TODO: Add a tag, and value transformer for each property field
 ;;; TODO: Add N/A if there is no value in candidate prompt
 ;;; TODO: Make a hook for results?
 ;;; TODO: Add item checkboxes especially for fields with many values
+;;; FIXME: Always insert to end in org gamedb buffer
 
 (require 'dash)
 (require 'json)
@@ -352,7 +351,7 @@ Creates a property drawer and seperates each value with a comma then blank."
         (org-back-to-heading-or-point-min)
         (forward-line)
         (org-cycle))
-      (if org-gamedb-field-property-list
+      (if (org-at-property-drawer-p)
           (re-search-forward org-property-end-re)
         (forward-line))
       (if org-gamedb-correct-header
