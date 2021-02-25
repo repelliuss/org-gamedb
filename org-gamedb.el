@@ -20,7 +20,6 @@
 ;;; Code:
 
 ;;; TODO: Add a tag, and value transformer for each property field
-;;; TODO: Add N/A if there is no value in candidate prompt
 ;;; TODO: Make a hook for results?
 ;;; TODO: Add item checkboxes especially for fields with many values
 
@@ -235,8 +234,16 @@ Return list of strings according to `org-gamedb-field-query-list'."
               (dolist (field (cdr org-gamedb-field-query-list) info-str)
                 (setq info-str (concat info-str
                                        org-gamedb-field-seperator
-                                       (cdr (assq field a-result)))))))
+                                       (let ((val (cdr (assq field a-result))))
+                                         (if val val "N/A")))))))
           results))
+
+(defun org-gamedb--matching-value-choice-p (value choice)
+  "Return t if VALUE and CHOICE match in meaning.
+If VALUE is nil, then CHOICE should be \"N/A\", otherwise
+they should be string equal."
+  (or (if (null value) (string= choice "N/A"))
+      (string= value choice)))
 
 (defun org-gamedb--get-guid (choice results)
   "Take user input CHOICE and all RESULTS and return its guid."
@@ -246,18 +253,18 @@ Return list of strings according to `org-gamedb-field-query-list'."
            (seq-find (lambda (a-result)
                        (let ((field (car org-gamedb-field-query-list))
                              (rest-fields (cdr org-gamedb-field-query-list))
-                             (value (car choice-values))
-                             (rest-values (cdr choice-values)))
+                             (ch-value (car choice-values))
+                             (rest-ch-values (cdr choice-values)))
                          (while (and rest-fields
-                                     (string= value (cdr (assq field a-result))))
+                                     (org-gamedb--matching-value-choice-p
+                                      (cdr (assq field a-result)) ch-value))
                            (setq field (car rest-fields)
                                  rest-fields (cdr rest-fields)
-                                 value (car rest-values)
-                                 rest-values (cdr rest-values)))
+                                 ch-value (car rest-ch-values)
+                                 rest-ch-values (cdr rest-ch-values)))
                          (and (null rest-fields)
-                              (let ((v (cdr (assq field a-result))))
-                                (or (if (null v) (string= value ""))
-                                    (string= value v))))))
+                              (org-gamedb--matching-value-choice-p
+                               (cdr (assq field a-result)) ch-value))))
                      results)))))
 
 (defun org-gamedb--prompt-results (results)
