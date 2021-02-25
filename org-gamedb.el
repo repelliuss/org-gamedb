@@ -21,6 +21,9 @@
 
 ;;; TODO: Make a hook for results?
 ;;; TODO: Revise doc string
+;;; TODO: update poster to something else?
+;;; TODO: replace --reduce
+;;; TODO: remove api key
 (require 'dash)
 (require 'json)
 (require 'url)
@@ -197,7 +200,6 @@ Function takes no args."
 (defun org-gamedb--encode-field-list (fields)
   "Return a string of FIELDS seperated by a comma for request URL."
   (--reduce (format "%s,%s" acc it) fields))
-;; TODO: replace --reduce
 
 (defun org-gamedb--require-guid-p (resource)
   "Return t if RESOURCE requires a guid, otherwise nil.
@@ -332,7 +334,7 @@ a second request with selected resource's guid."
 
 ;; FIXME: when there is property
 (defun org-gamedb--insert-image (url name)
-  "Insert image of queried resource from URL with its NAME as description." ; TODO: improve doc
+  "Insert image of queried resource from URL with its NAME as description."
   (let ((beg (point)))
     (if (not org-gamedb-store-images-explicitly)
         (insert (format "\n[[%s][Poster]]\n\n" url))
@@ -479,7 +481,7 @@ endpoint to the request."
               (save-excursion
                 (goto-char (cdr excursion))         ; goto point where query called
                 (funcall callback data resource)))
-          (error (assq 'error data))))))) ; TODO: check error in json obj
+          (error (assq 'error data)))))))
 
 (defun org-gamedb--mk-request (resource type &optional query guid)
   "Make a request to RESOURCE endpoint.
