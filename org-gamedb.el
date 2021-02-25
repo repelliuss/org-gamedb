@@ -23,7 +23,6 @@
 ;;; TODO: Add N/A if there is no value in candidate prompt
 ;;; TODO: Make a hook for results?
 ;;; TODO: Add item checkboxes especially for fields with many values
-;;; FIXME: Always insert to end in org gamedb buffer
 
 (require 'dash)
 (require 'json)
@@ -335,14 +334,16 @@ Creates a property drawer and seperates each value with a comma then blank."
                       'string))))))))
 
 (defun org-gamedb--on-success-get (data _)
-  (let* ((buffer (if (and (org-entry-get nil "ITEM")
+  (let* ((at-heading-p (org-entry-get nil "ITEM"))
+         (buffer (if (and at-heading-p
                           (not org-gamedb-always-create-buffer))
                      (current-buffer)
                    (pop-to-buffer "*Org GameDB*" nil)))
          (results (cdr (assq 'results data)))
          (resource-name (cdr (assq 'name results))))
     (with-current-buffer buffer
-      (when (string= (buffer-name buffer)  "*Org GameDB*")
+      (when (and (string= (buffer-name buffer)  "*Org GameDB*")
+                 (not at-heading-p))
         (org-mode)
         (goto-char (point-max))
         (insert (format "* %s\n" resource-name)))
