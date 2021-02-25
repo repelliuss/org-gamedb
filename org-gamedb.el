@@ -20,7 +20,6 @@
 ;;; Code:
 
 ;;; TODO: Make a hook for results?
-;;; TODO: Add item checkboxes especially for fields with many values
 ;;; TODO: Revise doc string
 (require 'dash)
 (require 'json)
@@ -102,7 +101,6 @@ Otherwise always prompt the query."
     (publishers)
     (genres)
     (themes)
-    (developed_games)
     (date_founded :transform (lambda (v) (substring v 0 10)))
     (location_country :tag "Country")
     (location_city :tag "City")
@@ -122,6 +120,20 @@ argument and return a string.
 
 It is recommended to pick common fields though it doesn't have to be included
 in all resources."
+  :type '(alist :key-type (symbol :tag "Field")
+                :value-type (choice (plist :key-type (choice (const :tag)
+                                                             (const :transform))
+                                           :value-type (choice (string :tag "Tag String")
+                                                               (function :tag "Transform Function")))
+                                    (const nil))))
+
+(defcustom org-gamedb-field-plain-list
+  '((developed_games :tag "Developed Games")
+    (location_city)
+    (location_country))
+  "Fields that will be inserted as plain lists to a org headline for a query.
+See `org-gamedb-field-property-list' for details. They are functionally same
+except fields in this list will be inserted as plain list."
   :type '(alist :key-type (symbol :tag "Field")
                 :value-type (choice (plist :key-type (choice (const :tag)
                                                              (const :transform))
@@ -383,15 +395,32 @@ Creates a property drawer and seperates each value with a comma then blank."
                       value
                       'string))))))))
 
+(defun org-gamedb--add-plain-list-values (results)
+  "Add values from RESULTS for fields in `org-gamedb-field-property-list'.
+Creates a property drawer and seperates each value with a comma then blank."
+  (insert "\n")
+  (dolist (field-assoc org-gamedb-field-plain-list)
+    (insert (format "- %s" (org-gamedb--get-field-tag field-assoc)))
+    (let ((value (cdr (assq (car field-assoc) results))))
+      (cond
+       ((or (stringp value)
+            (integerp value))
+        (insert
+         (format " :: %s\n"
+                 (org-gamedb--get-field-transformed-value field-assoc value))))
        ((vectorp value)
-        (org-gamedb--add-property
-         field-assoc
-         (string-remove-suffix
-          ", "
-          (seq-mapcat (lambda (a-value-assoc)
-                        (format "%s, " (cdr (assq 'name a-value-assoc))))
-                      value
-                      'string))))))))
+        (org-insert-item)
+        (org-indent-item)
+        (goto-char (point-at-eol))
+        (seq-do (lambda (a-value-assoc)
+                  (insert (org-gamedb--get-field-transformed-value
+                           field-assoc
+                           (cdr (assq 'name a-value-assoc))))
+                  (org-insert-item))
+                value)
+        (delete-region (point-at-bol) (point-at-eol)))
+       ((null value)
+        (delete-region (point-at-bol) (point-at-eol)))))))
 
 (defun org-gamedb--on-success-get (data _)
   (let* ((at-heading-p (org-entry-get nil "ITEM"))
@@ -425,7 +454,8 @@ Creates a property drawer and seperates each value with a comma then blank."
       (if org-gamedb-include-descriptor
           (org-gamedb--add-descriptor
            (cdr (assq 'deck results))))
-      (goto-char (point-max)))))
+      (when org-gamedb-field-plain-list
+        (org-gamedb--add-plain-list-values results)))))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
