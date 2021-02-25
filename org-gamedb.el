@@ -19,9 +19,9 @@
 ;;
 ;;; Code:
 
-;;; TODO: Add a tag, and value transformer for each property field
 ;;; TODO: Make a hook for results?
 ;;; TODO: Add item checkboxes especially for fields with many values
+;;; TODO: Revise doc string
 (require 'dash)
 (require 'json)
 (require 'url)
@@ -97,20 +97,37 @@ Otherwise always prompt the query."
   :type 'boolean)
 
 (defcustom org-gamedb-field-property-list
-  '(original_release_date
-    developers publishers genres themes
-    developed_games date_founded
-    location_country location_city franchises birthday
-    games)
+  '((original_release_date :tag "Release")
+    (developers)
+    (publishers)
+    (genres)
+    (themes)
+    (developed_games)
+    (date_founded :transform (lambda (v) (substring v 0 10)))
+    (location_country :tag "Country")
+    (location_city :tag "City")
+    (birthday)
+    (games))
   "Fields that will be inserted as properties to org-header for a query.
 These fields will be fetched and inserted to the property drawer of org header
 named with value of 'name' field of result if there is one.
 
-Available values are fields.
-See URL `https://www.giantbomb.com/api/documentation/' for available fields.
+This is an association list where each association in the form of
+\(FIELD . PLIST\) . For available fields,
+see URL `https://www.giantbomb.com/api/documentation/'.
+PLIST may be empty or it may have a `:tag' property that will be replaced
+with name of the field and `:transform' property that will be applied to
+each value of that field. This must be a function which takes 1 string
+argument and return a string.
+
 It is recommended to pick common fields though it doesn't have to be included
 in all resources."
-  :type '(repeat :tag "Field" symbol))
+  :type '(alist :key-type (symbol :tag "Field")
+                :value-type (choice (plist :key-type (choice (const :tag)
+                                                             (const :transform))
+                                           :value-type (choice (string :tag "Tag String")
+                                                               (function :tag "Transform Function")))
+                                    (const nil))))
 
 (defcustom org-gamedb-image-type 'medium
   "Type of image inserted after a query.
@@ -168,6 +185,7 @@ Function takes no args."
 (defun org-gamedb--encode-field-list (fields)
   "Return a string of FIELDS seperated by a comma for request URL."
   (--reduce (format "%s,%s" acc it) fields))
+;; TODO: replace --reduce
 
 (defun org-gamedb--require-guid-p (resource)
   "Return t if RESOURCE requires a guid, otherwise nil.
@@ -320,19 +338,54 @@ a second request with selected resource's guid."
   "Add DESCRIPTOR to the end of heading."
   (insert (format "\n%s\n" descriptor)))
 
+(defun org-gamedb--get-field-tag (field-assoc)
+  "Return tag of FIELD-ASSOC if there is, otherwise capitalized field."
+  (let ((plist (cdr field-assoc)))
+    (if plist
+        (let ((tag (plist-get plist :tag)))
+          (if tag tag (capitalize (symbol-name (car field-assoc)))))
+      (capitalize (symbol-name (car field-assoc))))))
+
+(defun org-gamedb--get-field-transformed-value (field-assoc value)
+  "Apply transformation in FIELD-ASSOC to VALUE.
+Apply transformation in FIELD-ASSOC to VALUE and return it if there is one,
+otherwise return VALUE itself."
+  (let ((plist (cdr field-assoc)))
+    (if plist
+        (let ((transform (plist-get plist :transform)))
+          (if transform
+              (funcall transform value)
+            value))
+      value)))
+
 (defun org-gamedb--add-property-values (results)
   "Add values from RESULTS for fields in `org-gamedb-field-property-list'.
 Creates a property drawer and seperates each value with a comma then blank."
-  (dolist (field org-gamedb-field-property-list)
-    (let ((value (cdr (assq field results))))
+  (dolist (field-assoc org-gamedb-field-property-list)
+    (let ((value (cdr (assq (car field-assoc) results))))
       (cond
        ((or (stringp value)
             (integerp value))
-        (org-entry-put nil (format "%s" field) value))
+        (org-entry-put
+         nil
+         (org-gamedb--get-field-tag field-assoc)
+         (org-gamedb--get-field-transformed-value field-assoc value)))
        ((vectorp value)
         (org-entry-put
          nil
-         (format "%s" field)
+         (org-gamedb--get-field-tag field-assoc)
+         (string-remove-suffix
+          ", "
+          (seq-mapcat (lambda (a-value-assoc)
+                        (format "%s, " (org-gamedb--get-field-transformed-value
+                                        field-assoc
+                                        (cdr (assq 'name a-value-assoc)))))
+                      value
+                      'string))))))))
+
+       ((vectorp value)
+        (org-gamedb--add-property
+         field-assoc
          (string-remove-suffix
           ", "
           (seq-mapcat (lambda (a-value-assoc)
@@ -409,7 +462,7 @@ and will make a call to `org-gamedb--on-success-query'."
         (progn
           (setq field-list (org-gamedb--encode-field-list
                             (append '(deck image name)
-                                    org-gamedb-field-property-list)))
+                                    (mapcar #'car org-gamedb-field-property-list))))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
                         (cons 'guid org-gamedb-field-query-list)))
