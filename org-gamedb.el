@@ -22,7 +22,6 @@
 ;;; TODO: Add a tag, and value transformer for each property field
 ;;; TODO: Make a hook for results?
 ;;; TODO: Add item checkboxes especially for fields with many values
-
 (require 'dash)
 (require 'json)
 (require 'url)
@@ -98,10 +97,11 @@ Otherwise always prompt the query."
   :type 'boolean)
 
 (defcustom org-gamedb-field-property-list
-  '(original_release_date developers publishers genres themes
-                          developed_games date_founded
-                          location_country location_city franchises birthday
-                          games)
+  '(original_release_date
+    developers publishers genres themes
+    developed_games date_founded
+    location_country location_city franchises birthday
+    games)
   "Fields that will be inserted as properties to org-header for a query.
 These fields will be fetched and inserted to the property drawer of org header
 named with value of 'name' field of result if there is one.
@@ -453,6 +453,17 @@ companies and \"stardew\" for games."
   (interactive
    (list (org-gamedb--get-query)))
   (org-gamedb--mk-request "games" 'query query))
+
+;;;###autoload
+(defun org-gamedb-get-api-key ()
+  "Browse \"https://www.giantbomb.com/api/\" to get an api key.
+You need to create a Giant Bomb account for it. Set your API key
+to `org-gamedb-api-key' in your customization file.
+
+Please respect \"Terms of Use\"."
+  (interactive)
+  (browse-url "https://www.giantbomb.com/api/")
+  (message "Set your API key to `org-gamedb-api-key'."))
 
 (provide 'org-gamedb)
 ;;; org-gamedb.el ends here
