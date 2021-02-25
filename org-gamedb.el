@@ -128,7 +128,7 @@ in all resources."
                                     (const nil))))
 
 (defcustom org-gamedb-field-plain-list
-  '((developed_games :tag "Developed Games")
+  '((developed_games)
     (location_city)
     (location_country))
   "Fields that will be inserted as plain lists to a org headline for a query.
@@ -350,13 +350,18 @@ a second request with selected resource's guid."
   "Add DESCRIPTOR to the end of heading."
   (insert (format "\n%s\n" descriptor)))
 
-(defun org-gamedb--get-field-tag (field-assoc)
-  "Return tag of FIELD-ASSOC if there is, otherwise capitalized field."
+(defun org-gamedb--get-field-tag (field-assoc rep)
+  "Return tag of FIELD-ASSOC if there is, otherwise prettified field name.
+Prettied field name is field name with \"_\" replaced with REP and capitalized.
+REP is \" \" in plain lists and \"-\" in property drawer."
   (let ((plist (cdr field-assoc)))
     (if plist
         (let ((tag (plist-get plist :tag)))
-          (if tag tag (capitalize (symbol-name (car field-assoc)))))
-      (capitalize (symbol-name (car field-assoc))))))
+          (if tag tag (capitalize
+                       (replace-regexp-in-string
+                        "_" rep (symbol-name (car field-assoc))))))
+      (capitalize
+       (replace-regexp-in-string "_" rep (symbol-name (car field-assoc)))))))
 
 (defun org-gamedb--get-field-transformed-value (field-assoc value)
   "Apply transformation in FIELD-ASSOC to VALUE.
@@ -380,12 +385,12 @@ Creates a property drawer and seperates each value with a comma then blank."
             (integerp value))
         (org-entry-put
          nil
-         (org-gamedb--get-field-tag field-assoc)
+         (org-gamedb--get-field-tag field-assoc "-")
          (org-gamedb--get-field-transformed-value field-assoc value)))
        ((vectorp value)
         (org-entry-put
          nil
-         (org-gamedb--get-field-tag field-assoc)
+         (org-gamedb--get-field-tag field-assoc "-")
          (string-remove-suffix
           ", "
           (seq-mapcat (lambda (a-value-assoc)
@@ -400,7 +405,7 @@ Creates a property drawer and seperates each value with a comma then blank."
 Creates a property drawer and seperates each value with a comma then blank."
   (insert "\n")
   (dolist (field-assoc org-gamedb-field-plain-list)
-    (insert (format "- %s" (org-gamedb--get-field-tag field-assoc)))
+    (insert (format "- %s" (org-gamedb--get-field-tag field-assoc " ")))
     (let ((value (cdr (assq (car field-assoc) results))))
       (cond
        ((or (stringp value)
@@ -492,7 +497,8 @@ and will make a call to `org-gamedb--on-success-query'."
         (progn
           (setq field-list (org-gamedb--encode-field-list
                             (append '(deck image name)
-                                    (mapcar #'car org-gamedb-field-property-list))))
+                                    (mapcar #'car org-gamedb-field-property-list)
+                                    (mapcar #'car org-gamedb-field-plain-list))))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
                         (cons 'guid org-gamedb-field-query-list)))
