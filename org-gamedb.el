@@ -437,21 +437,25 @@ it in descriptor form. If there are values then insert them as sub-lists."
          (format " :: %s\n"
                  (org-gamedb--get-field-transformed-value field-assoc value))))
        ((vectorp value)
-        (org-insert-item)
-        (org-indent-item)
-        (goto-char (point-at-eol))
-        (seq-do (lambda (a-value-assoc)
-                  (insert (org-gamedb--get-field-transformed-value
-                           field-assoc
-                           (cdr (assq 'name a-value-assoc))))
-                  (org-insert-item))
-                value)
-        (kill-whole-line))
+        (if (seq-empty-p value)
+            (delete-region (point-at-bol) (point-at-eol))
+          (org-insert-item)
+          (org-indent-item)
+          (goto-char (point-at-eol))
+          (seq-do (lambda (a-value-assoc)
+                    (insert (org-gamedb--get-field-transformed-value
+                             field-assoc
+                             (cdr (assq 'name a-value-assoc))))
+                    (org-insert-item))
+                  value)
+          (kill-whole-line)))
        ((null value)
         (delete-region (point-at-bol) (point-at-eol))))))
   ;; When there is many async calls in one go,
   ;; `org-insert-heading-respect-content'
   ;; goes crazy with inserting blank lines. This just /tries/ to fix it.
+  (if (= (point-max) (point))
+      (forward-line -1))
   (unless (= (point-max) (point))
     (while (= (point-at-bol) (point-at-eol))
       (kill-whole-line)
