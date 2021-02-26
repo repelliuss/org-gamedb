@@ -31,7 +31,6 @@
 ;;; Code:
 
 ;;; TODO: remove api key
-;;; TODO: Add more defaults
 (require 'json)
 (require 'url)
 (require 'org)
@@ -110,7 +109,12 @@ Otherwise always prompt the query and insert a new headline for query."
     (developers)
     (publishers)
     (genres)
+    (birth_date)
+    (hometown)
+    (install_base)
+    (gender)
     (themes)
+    (platform)
     (date_founded :transform (lambda (v) (substring v 0 10)))
     (location_country :tag "Country")
     (location_city :tag "City")
