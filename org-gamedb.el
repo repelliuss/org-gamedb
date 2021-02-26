@@ -1,4 +1,4 @@
-;;; org-gamedb.el --- A Giant Bomb API client to work with Emacs org-mode -*- lexical-binding: t; -*-
+;;; org-gamedb.el --- A Giant Bomb API client to work -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2021 repelliuss
 ;;
@@ -22,6 +22,7 @@
 ;;; TODO: Revise doc string
 ;;; TODO: remove api key
 ;;; TODO: Add more defaults
+;;; TODO: Update description
 (require 'json)
 (require 'url)
 (require 'org)
@@ -173,6 +174,10 @@ Function takes no args."
 
 (defcustom org-gamedb-always-create-buffer nil
   "Always create a new buffer for resource contents if t."
+  :type 'boolean)
+
+(defcustom org-gamedb-always-insert-heading nil
+  "Always insert a new heading for resource contents if t."
   :type 'boolean)
 
 (defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
@@ -400,7 +405,7 @@ Creates a property drawer and seperates each value with a comma then blank."
                       'string))))))))
 
 (defun org-gamedb--add-plain-list-values (results)
-  "Add values from RESULTS for fields in `org-gamedb-field-property-list'.
+  "Add values from RESULTS for fields in `org-gamedb-field-plain-list'.
 Creates a property drawer and seperates each value with a comma then blank."
   (insert "\n")
   (dolist (field-assoc org-gamedb-field-plain-list)
@@ -422,34 +427,39 @@ Creates a property drawer and seperates each value with a comma then blank."
                            (cdr (assq 'name a-value-assoc))))
                   (org-insert-item))
                 value)
-        (delete-region (point-at-bol) (point-at-eol)))
+        (kill-whole-line))
        ((null value)
-        (delete-region (point-at-bol) (point-at-eol)))))))
+        (delete-region (point-at-bol) (point-at-eol))))))
+  (unless (= (point-max) (point))
+    (while (= (point-at-bol) (point-at-eol))
+     (kill-whole-line)
+     (forward-line -1))))
 
 (defun org-gamedb--on-success-get (data _)
-  (let* ((at-heading-p (org-entry-get nil "ITEM"))
-         (buffer (if (and at-heading-p
-                          (not org-gamedb-always-create-buffer))
-                     (current-buffer)
-                   (pop-to-buffer "*Org GameDB*" nil)))
+  (let* ((at-heading (org-entry-get nil "ITEM"))
          (results (cdr (assq 'results data)))
          (resource-name (cdr (assq 'name results))))
-    (with-current-buffer buffer
-      (when (and (string= (buffer-name buffer)  "*Org GameDB*")
-                 (not at-heading-p))
-        (org-mode)
-        (goto-char (point-max))
-        (insert (format "* %s\n" resource-name)))
+    (when (or (not at-heading)
+              org-gamedb-always-create-buffer)
+      (pop-to-buffer "*Org GameDB*" nil)
+      (org-mode))
+    (save-excursion
+      (when (or (and (string= (buffer-name (current-buffer))  "*Org GameDB*")
+                     (not at-heading))
+                (not org-gamedb-use-org-header)
+                org-gamedb-always-insert-heading)
+        (org-insert-heading-respect-content)
+        (insert (format "%s\n" resource-name)))
+      (org-back-to-heading-or-point-min)
       (when org-gamedb-field-property-list
         (org-gamedb--add-property-values results)
-        (org-back-to-heading-or-point-min)
         (forward-line)
         (org-cycle))
-      (if (org-at-property-drawer-p)
-          (re-search-forward org-property-end-re)
-        (forward-line))
       (if org-gamedb-correct-header
           (org-edit-headline resource-name))
+      (if (org-at-property-drawer-p)
+          (re-search-forward org-property-end-re)
+        (goto-char (point-at-eol)))
       (if org-gamedb-include-image
           (org-gamedb--insert-image
            (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
