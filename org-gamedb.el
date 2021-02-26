@@ -588,7 +588,9 @@ companies and \"stardew\" for games.
 RESOURCE is a resource defined by API. See available resources at
 URL `https://www.giantbomb.com/api/documentation/'.
 
-If you don't know what to query, just make an empty query!"
+If you don't know what to query, just make an empty query!
+
+Don't forget to set an API key first. See `org-gamedb-get-api-key'."
   (interactive
    (list (completing-read "Pick a resource: "
                           org-gamedb--resource-list
@@ -602,7 +604,9 @@ If you don't know what to query, just make an empty query!"
 QUERY is a string and can be anything. Example queries are \"quantic\" for
 companies and \"stardew\" for games.
 
-If you don't know what to query, just make an empty query!"
+If you don't know what to query, just make an empty query!
+
+Don't forget to set an API key. See `org-gamedb-get-api-key'."
   (interactive
    (list (org-gamedb--get-query)))
   (org-gamedb--mk-request "games" 'query query))
