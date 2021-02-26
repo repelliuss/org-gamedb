@@ -30,7 +30,6 @@
 
 ;;; Code:
 
-;;; TODO: remove api key
 (require 'json)
 (require 'url)
 (require 'org)
@@ -42,8 +41,7 @@
   :prefix "org-gamedb-"
   :package-version '(Org-Gamedb . "0.0.1"))
 
-;; This API Key is used for testing purposes
-(defcustom org-gamedb-api-key "6023fb372e7fcafed56149e47c24226e8dac4234"
+(defcustom org-gamedb-api-key nil
   "Giant Bomb API key.
 Set this to your API key you got from Giant Bomb. You can get an API key at
 URL `https://www.giantbomb.com/api/' . See 'Terms of Use'."
