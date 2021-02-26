@@ -1,22 +1,33 @@
-;;; org-gamedb.el --- A Giant Bomb API client to work -*- lexical-binding: t; -*-
-;;
+;;; org-gamedb.el --- A Game API client to work with org-mode -*- lexical-binding: t; -*-
+
 ;; Copyright (C) 2021 repelliuss
-;;
+
 ;; Author: repelliuss <https://github.com/repelliuss>
 ;; Maintainer: repelliuss <repelliuss@gmail.com>
 ;; Created: February 17, 2021
 ;; Modified: February 17, 2021
 ;; Version: 0.0.1
-;; Keywords: Symbol’s value as variable is void: finder-known-keywords
+;; Keywords: org, game, api
 ;; Homepage: https://github.com/repelliuss/org-gamedb
-;; Package-Requires: ((emacs "24.3"))
-;;
-;; This file is not part of GNU Emacs.
-;;
+
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 ;;; Commentary:
-;;
-;;  A Giant Bomb API client to work with Emacs org-mode
-;;
+
+;;  A Game API client to work with Emacs org-mode. Current API is provided
+;;  by Giant Bomb. See https://www.giantbomb.com/.
+
 ;;; Code:
 
 ;;; TODO: Revise doc string
@@ -432,8 +443,8 @@ Creates a property drawer and seperates each value with a comma then blank."
         (delete-region (point-at-bol) (point-at-eol))))))
   (unless (= (point-max) (point))
     (while (= (point-at-bol) (point-at-eol))
-     (kill-whole-line)
-     (forward-line -1))))
+      (kill-whole-line)
+      (forward-line -1))))
 
 (defun org-gamedb--on-success-get (data _)
   (let* ((at-heading (org-entry-get nil "ITEM"))
