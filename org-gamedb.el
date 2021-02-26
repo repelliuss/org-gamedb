@@ -19,16 +19,13 @@
 ;;
 ;;; Code:
 
-;;; TODO: Make a hook for results?
 ;;; TODO: Revise doc string
-;;; TODO: update poster to something else?
-;;; TODO: replace --reduce
 ;;; TODO: remove api key
-(require 'dash)
+;;; TODO: Add more defaults
 (require 'json)
 (require 'url)
 (require 'org)
-(require 'org-element)
+(require 'seq)
 
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs org-mode."
@@ -107,8 +104,7 @@ Otherwise always prompt the query."
     (date_founded :transform (lambda (v) (substring v 0 10)))
     (location_country :tag "Country")
     (location_city :tag "City")
-    (birthday)
-    (games))
+    (birthday))
   "Fields that will be inserted as properties to org-header for a query.
 These fields will be fetched and inserted to the property drawer of org header
 named with value of 'name' field of result if there is one.
@@ -132,8 +128,7 @@ in all resources."
 
 (defcustom org-gamedb-field-plain-list
   '((developed_games)
-    (location_city)
-    (location_country))
+    (games))
   "Fields that will be inserted as plain lists to a org headline for a query.
 See `org-gamedb-field-property-list' for details. They are functionally same
 except fields in this list will be inserted as plain list."
@@ -144,7 +139,7 @@ except fields in this list will be inserted as plain list."
                                                                (function :tag "Transform Function")))
                                     (const nil))))
 
-(defcustom org-gamedb-image-type 'medium
+(defcustom org-gamedb-image-type 'original
   "Type of image inserted after a query.
 If `org-gamedb-include-image' is t then inserted image will be this type
 Available values are icon, medium, screen, screen_large, small, super,
@@ -199,7 +194,9 @@ Function takes no args."
 
 (defun org-gamedb--encode-field-list (fields)
   "Return a string of FIELDS seperated by a comma for request URL."
-  (--reduce (format "%s,%s" acc it) fields))
+  (seq-reduce (lambda (acc it)
+                (format "%s,%s" acc it))
+              (cdr fields) (car fields)))
 
 (defun org-gamedb--require-guid-p (resource)
   "Return t if RESOURCE requires a guid, otherwise nil.
@@ -337,7 +334,7 @@ a second request with selected resource's guid."
   "Insert image of queried resource from URL with its NAME as description."
   (let ((beg (point)))
     (if (not org-gamedb-store-images-explicitly)
-        (insert (format "\n[[%s][Poster]]\n\n" url))
+        (insert (format "\n\n[[%s][Image]]\n" url))
       (let* ((dir (funcall org-gamedb-cache-dir-generator))
              (file-path (concat dir
                                 name
