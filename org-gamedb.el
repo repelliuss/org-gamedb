@@ -151,7 +151,7 @@ except fields in this list will be inserted as plain list."
                                                                (function :tag "Transform Function")))
                                     (const nil))))
 
-(defcustom org-gamedb-image-type 'original
+(defcustom org-gamedb-image-type 'medium
   "Type of image inserted after a query.
 If `org-gamedb-include-image' is t then inserted image will be this type
 Available values are icon, medium, screen, screen_large, small, super,
