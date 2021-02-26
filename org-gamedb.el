@@ -30,10 +30,8 @@
 
 ;;; Code:
 
-;;; TODO: Revise doc string
 ;;; TODO: remove api key
 ;;; TODO: Add more defaults
-;;; TODO: Update description
 (require 'json)
 (require 'url)
 (require 'org)
@@ -53,15 +51,15 @@ URL `https://www.giantbomb.com/api/' . See 'Terms of Use'."
   :link '(url-link :tag "Get an API key" "https://www.giantbomb.com/api/")
   :type 'string)
 
-(defcustom org-gamedb-candidate-sort '((original_release_date . desc)
-                                       (name . asc))
+(defcustom org-gamedb-candidate-sorting '((original_release_date . desc)
+                                          (name . asc))
   "How results are sorted by for all queries.
 If there are more than one result for a query, then candidates will be
 sorted by the first field according to its value iff the queried resource has
 that field and supports sorting for it.
 
-Available values are in this form: '(field . order)' where field is one of the
-fields for resources and order is either 'asc' or 'desc'.
+Available values are in this form: (FIELD . ORDER) where field is one of the
+fields for resources and order is either `asc' or `desc'.
 See URL `https://www.giantbomb.com/api/documentation/' for available fields.
 It is recommended to pick a common field like 'name' though it doesn't have to
 be included in all resources."
@@ -69,7 +67,7 @@ be included in all resources."
                                     (choice (const 'asc)
                                             (const 'desc)))))
 
-(defcustom org-gamedb-field-query-list '(name original_release_date)
+(defcustom org-gamedb-query-fields '(name original_release_date)
   "Fetched fields for all queries.
 If there is more than one resource for a query, then user is prompted to select
 a resource from candidates. Candidates will have these fields as information
@@ -95,19 +93,19 @@ have to be included in all resources."
   :type 'string)
 
 (defcustom org-gamedb-include-image t
-  "Inserts an image if t wherever possible."
+  "If non-nil, insert an image wherever possible."
   :type 'boolean)
 
-(defcustom org-gamedb-use-org-header t
-  "Try to query org header if non-nil.
-Otherwise always prompt the query."
+(defcustom org-gamedb-use-org-headline t
+  "If non-nil, try to query with org headline.
+Otherwise always prompt the query and insert a new headline for query."
   :type 'boolean)
 
-(defcustom org-gamedb-correct-header t
-  "If t, then update the heading with the queried resource's name."
+(defcustom org-gamedb-correct-headline t
+  "If non-nil, update the headline with the queried resource's name."
   :type 'boolean)
 
-(defcustom org-gamedb-field-property-list
+(defcustom org-gamedb-property-fields
   '((original_release_date :tag "Release")
     (developers)
     (publishers)
@@ -117,9 +115,9 @@ Otherwise always prompt the query."
     (location_country :tag "Country")
     (location_city :tag "City")
     (birthday))
-  "Fields that will be inserted as properties to org-header for a query.
-These fields will be fetched and inserted to the property drawer of org header
-named with value of 'name' field of result if there is one.
+  "Fields that will be inserted as properties to a org headline after a query.
+If there is one, these fields will be fetched and inserted to the property
+drawer of org header named with value of 'name' field of result.
 
 This is an association list where each association in the form of
 \(FIELD . PLIST\) . For available fields,
@@ -138,11 +136,11 @@ in all resources."
                                                                (function :tag "Transform Function")))
                                     (const nil))))
 
-(defcustom org-gamedb-field-plain-list
+(defcustom org-gamedb-plain-list-fields
   '((developed_games)
     (games))
-  "Fields that will be inserted as plain lists to a org headline for a query.
-See `org-gamedb-field-property-list' for details. They are functionally same
+  "Fields that will be inserted as plain lists to a org headline after a query.
+See `org-gamedb-property-fields' for details. They are functionally same
 except fields in this list will be inserted as plain list."
   :type '(alist :key-type (symbol :tag "Field")
                 :value-type (choice (plist :key-type (choice (const :tag)
@@ -167,28 +165,32 @@ thumb, tiny, original."
                  (const original)))
 
 (defcustom org-gamedb-display-image-after t
-  "Display inserted image after a query if t."
+  "If non-nil, display inserted image after a query."
   :type 'boolean)
 
 (defcustom org-gamedb-include-descriptor t
-  "Include a descriptor for queried resource."
+  "If non-nil, include a descriptor for queried resource."
   :type 'boolean)
 
 (defcustom org-gamedb-cache-dir-generator #'org-gamedb--get-cache-dir
-  "Function that will return path to cache directory.
-Function takes no args."
+  "Function that will return a path to cache directory.
+Function must take no args and return a string."
   :type 'function)
 
 (defcustom org-gamedb-store-images-explicitly t
-  "Store images at `org-gamedb-cache-dir-generator'."
+  "If non-nil, store images at `org-gamedb-cache-dir-generator'."
   :type 'boolean)
 
 (defcustom org-gamedb-always-create-buffer nil
-  "Always create a new buffer for resource contents if t."
+  "If non-nil, always create a new buffer for resource contents."
   :type 'boolean)
 
 (defcustom org-gamedb-always-insert-heading nil
-  "Always insert a new heading for resource contents if t."
+  "If non-nil, always insert a new heading for resource contents.
+If user will make repetitive async queries in one go, then this is recommended
+to be set t, preferably lexically in custom function. This is because if user
+is in an org headline, then all query results will be inserted to that headline
+asynchronously, possible loss of headlines for queries."
   :type 'boolean)
 
 (defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
@@ -198,14 +200,15 @@ Function takes no args."
   "Response format of API.")
 
 (defconst org-gamedb--resource-list
-  '(accessories characters companies concepts dlcs games
-                game_ratings locations objects people platforms promos
-                rating_boards regions releases reviews themes user_reviews
-                videos video_categories video_shows)
+  '(accessories
+    characters companies concepts dlcs games
+    game_ratings locations objects people platforms promos
+    rating_boards regions releases reviews themes user_reviews
+    videos video_categories video_shows)
   "List of resources to query.")
 
 (defun org-gamedb--get-cache-dir ()
-  "Return cache directory for images."
+  "Return default cache directory for images."
   "~/.cache/org-gamedb/")
 
 (defun org-gamedb--encode-field-list (fields)
@@ -222,14 +225,14 @@ end with 's."
            (string= "people" resource))))
 
 (defun org-gamedb--encode-candidate-sort ()
-  "Return a sort value for a request to API."
+  "Return a proper sort value for request."
   (let ((encoded ""))
-    (dolist (element (reverse org-gamedb-candidate-sort) encoded)
+    (dolist (element (reverse org-gamedb-candidate-sorting) encoded)
       (setq encoded
             (concat encoded (format "%s:%s," (car element) (cdr element)))))))
 
 (defun org-gamedb--encode-url (resource field-list &optional filter-val guid)
-  "Return a request url to Giant Bomb.
+  "Return a request url to API.
 RESOURCE is interested category about games.
 See URL `https://www.giantbomb.com/api/documentation/' for available resources.
 
@@ -272,11 +275,11 @@ A GUID is required if given resource is for search purposes, decided by
 
 (defun org-gamedb--mk-results-collection (results)
   "Construct descriptors for each of RESULTS.
-Return list of strings according to `org-gamedb-field-query-list'."
+Return list of strings according to `org-gamedb-query-fields'."
   (mapcar (lambda (a-result)
-            (let ((info-str (cdr (assq (car org-gamedb-field-query-list)
+            (let ((info-str (cdr (assq (car org-gamedb-query-fields)
                                        a-result))))
-              (dolist (field (cdr org-gamedb-field-query-list) info-str)
+              (dolist (field (cdr org-gamedb-query-fields) info-str)
                 (setq info-str (concat info-str
                                        org-gamedb-field-seperator
                                        (let ((val (cdr (assq field a-result))))
@@ -296,8 +299,8 @@ they should be string equal."
     (cdr
      (assq 'guid
            (seq-find (lambda (a-result)
-                       (let ((field (car org-gamedb-field-query-list))
-                             (rest-fields (cdr org-gamedb-field-query-list))
+                       (let ((field (car org-gamedb-query-fields))
+                             (rest-fields (cdr org-gamedb-query-fields))
                              (ch-value (car choice-values))
                              (rest-ch-values (cdr choice-values)))
                          (while (and rest-fields
@@ -314,7 +317,7 @@ they should be string equal."
 
 (defun org-gamedb--prompt-results (results)
   "Prompt RESULTS to user and return its guid.
-Each resource appears according to `org-gamedb-field-query-list' and
+Each resource appears according to `org-gamedb-query-fields' and
 `org-gamedb-field-seperator'."
   (let ((this-command 'org-gamedb--prompt-results)) ; fixes counsel-M-x-transformer problem
     (org-gamedb--get-guid
@@ -327,9 +330,9 @@ Each resource appears according to `org-gamedb-field-query-list' and
   "Handle success DATA taken from RESOURCE endpoint.
 If there is no result notify it.
 If there is one result then gets its GUID and make a second request to get
-values for `org-gamedb-field-property-list'.
+values for `org-gamedb-property-fields'.
 If there is more than one result then prompt user to select one with each
-resource in the form according to `org-gamedb-field-query-list'. Then make
+resource in the form according to `org-gamedb-query-fields'. Then make
 a second request with selected resource's guid."
   (let ((results-count (cdr (assq 'number_of_total_results data)))
         (results (cdr (assq 'results data))))
@@ -345,7 +348,6 @@ a second request with selected resource's guid."
                                 nil
                                 (org-gamedb--prompt-results results))))))
 
-;; FIXME: when there is property
 (defun org-gamedb--insert-image (url name)
   "Insert image of queried resource from URL with its NAME as description."
   (let ((beg (point)))
@@ -362,7 +364,7 @@ a second request with selected resource's guid."
         (org-display-inline-images t t beg (point)))))
 
 (defun org-gamedb--add-descriptor (descriptor)
-  "Add DESCRIPTOR to the end of heading."
+  "Add DESCRIPTOR of resource to org headline."
   (insert (format "\n%s\n" descriptor)))
 
 (defun org-gamedb--get-field-tag (field-assoc rep)
@@ -391,9 +393,9 @@ otherwise return VALUE itself."
       value)))
 
 (defun org-gamedb--add-property-values (results)
-  "Add values from RESULTS for fields in `org-gamedb-field-property-list'.
-Creates a property drawer and seperates each value with a comma then blank."
-  (dolist (field-assoc org-gamedb-field-property-list)
+  "Add values from RESULTS for fields in `org-gamedb-property-fields'.
+Create a property drawer and seperate each value with a comma then blank."
+  (dolist (field-assoc org-gamedb-property-fields)
     (let ((value (cdr (assq (car field-assoc) results))))
       (cond
        ((or (stringp value)
@@ -416,10 +418,12 @@ Creates a property drawer and seperates each value with a comma then blank."
                       'string))))))))
 
 (defun org-gamedb--add-plain-list-values (results)
-  "Add values from RESULTS for fields in `org-gamedb-field-plain-list'.
-Creates a property drawer and seperates each value with a comma then blank."
+  "Add values from RESULTS for fields in `org-gamedb-plain-list-fields'.
+Create a plain list for each field with a value or values in
+`org-gamedb-plain-list-fields'. If value is an integer or a string then insert
+it in descriptor form. If there are values then insert them as sub-lists."
   (insert "\n")
-  (dolist (field-assoc org-gamedb-field-plain-list)
+  (dolist (field-assoc org-gamedb-plain-list-fields)
     (insert (format "- %s" (org-gamedb--get-field-tag field-assoc " ")))
     (let ((value (cdr (assq (car field-assoc) results))))
       (cond
@@ -441,12 +445,42 @@ Creates a property drawer and seperates each value with a comma then blank."
         (kill-whole-line))
        ((null value)
         (delete-region (point-at-bol) (point-at-eol))))))
+  ;; When there is many async calls in one go,
+  ;; `org-insert-heading-respect-content'
+  ;; goes crazy with inserting blank lines. This just /tries/ to fix it.
   (unless (= (point-max) (point))
     (while (= (point-at-bol) (point-at-eol))
       (kill-whole-line)
       (forward-line -1))))
 
 (defun org-gamedb--on-success-get (data _)
+  "Parse DATA and insert values to a org headline.
+This function is called after a successfull query and responsible function to
+insert queried resource's values.
+
+If cursor is not inside an org headline or `org-gamedb-always-create-buffer'
+is non-nil, create a buffer named \"*Org GameDB*\" in `org-mode' and insert
+values there appropriately.
+
+If `org-gamedb-always-insert-heading' is non-nil, `org-gamedb-use-org-headline'
+is nil or cursor is in \"*Org GameDB*\" buffer but not in a headline, then
+insert a new headline with name of the resource and insert values there
+appropriately.
+
+If `org-gamedb-property-fields' is non-nil and there is a value for at least
+one of them, insert each value in the property drawer.
+
+If `org-gamedb-correct-headline' is non-nil, update heading with resource's
+name.
+
+If `org-gamedb-include-image' is non-nil, insert an image of resource if there
+is.
+
+If `org-gamedb-include-descriptor' is non-nil, insert a descriptor text of
+resource if there is.
+
+If `org-gamedb-plain-list-fields' is non-nil and there is a value for at least
+one of them, insert each value in a plain list."
   (let* ((at-heading (org-entry-get nil "ITEM"))
          (results (cdr (assq 'results data)))
          (resource-name (cdr (assq 'name results))))
@@ -457,16 +491,16 @@ Creates a property drawer and seperates each value with a comma then blank."
     (save-excursion
       (when (or (and (string= (buffer-name (current-buffer))  "*Org GameDB*")
                      (not at-heading))
-                (not org-gamedb-use-org-header)
+                (not org-gamedb-use-org-headline)
                 org-gamedb-always-insert-heading)
         (org-insert-heading-respect-content)
         (insert (format "%s\n" resource-name)))
       (org-back-to-heading-or-point-min)
-      (when org-gamedb-field-property-list
+      (when org-gamedb-property-fields
         (org-gamedb--add-property-values results)
         (forward-line)
         (org-cycle))
-      (if org-gamedb-correct-header
+      (if org-gamedb-correct-headline
           (org-edit-headline resource-name))
       (if (org-at-property-drawer-p)
           (re-search-forward org-property-end-re)
@@ -479,15 +513,15 @@ Creates a property drawer and seperates each value with a comma then blank."
       (if org-gamedb-include-descriptor
           (org-gamedb--add-descriptor
            (cdr (assq 'deck results))))
-      (when org-gamedb-field-plain-list
+      (when org-gamedb-plain-list-fields
         (org-gamedb--add-plain-list-values results)))))
 
 (defun org-gamedb--handle-request (status callback resource excursion)
   "Handle request errors and let control to CALLBACK on success.
 STATUS is response to a request returned by `url-retrieve' functions.
 
-CALLBACK is a function with 2 args to call on success with a data and RESOURCE
-endpoint to the request."
+CALLBACK must be a function with 2 args to call on success with a data
+and RESOURCE endpoint to the request."
   (cond
    ((plist-member status :error)
     (error (buffer-substring (search-forward " " nil nil 2) (point-at-eol))))
@@ -517,11 +551,11 @@ and will make a call to `org-gamedb--on-success-query'."
         (progn
           (setq field-list (org-gamedb--encode-field-list
                             (append '(deck image name)
-                                    (mapcar #'car org-gamedb-field-property-list)
-                                    (mapcar #'car org-gamedb-field-plain-list))))
+                                    (mapcar #'car org-gamedb-property-fields)
+                                    (mapcar #'car org-gamedb-plain-list-fields))))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
-                        (cons 'guid org-gamedb-field-query-list)))
+                        (cons 'guid org-gamedb-query-fields)))
       (push #'org-gamedb--on-success-query cbargs))
     (url-retrieve
      (org-gamedb--encode-url resource field-list query guid)
@@ -532,7 +566,7 @@ and will make a call to `org-gamedb--on-success-query'."
 
 (defun org-gamedb--get-query ()
   "Return input query for the next resource query."
-  (if org-gamedb-use-org-header
+  (if org-gamedb-use-org-headline
       (let ((heading (org-entry-get nil "ITEM")))
         (if heading
             heading
@@ -546,7 +580,9 @@ QUERY is a string and can be anything. Example queries are \"quantic\" for
 companies and \"stardew\" for games.
 
 RESOURCE is a resource defined by API. See available resources at
-URL `https://www.giantbomb.com/api/documentation/'."
+URL `https://www.giantbomb.com/api/documentation/'.
+
+If you don't know what to query, just make an empty query!"
   (interactive
    (list (completing-read "Pick a resource: "
                           org-gamedb--resource-list
@@ -558,7 +594,9 @@ URL `https://www.giantbomb.com/api/documentation/'."
 (defun org-gamedb-games-query (query)
   "Make a QUERY to games resource.
 QUERY is a string and can be anything. Example queries are \"quantic\" for
-companies and \"stardew\" for games."
+companies and \"stardew\" for games.
+
+If you don't know what to query, just make an empty query!"
   (interactive
    (list (org-gamedb--get-query)))
   (org-gamedb--mk-request "games" 'query query))
