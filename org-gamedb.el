@@ -392,13 +392,14 @@ REP is \" \" in plain lists and \"-\" in property drawer."
   "Apply transformation in FIELD-ASSOC to VALUE.
 Apply transformation in FIELD-ASSOC to VALUE and return it if there is one,
 otherwise return VALUE itself."
-  (let ((plist (cdr field-assoc)))
+  (let ((plist (cdr field-assoc))
+        (str-value (format "%s" value)))
     (if plist
         (let ((transform (plist-get plist :transform)))
           (if transform
-              (funcall transform value)
-            value))
-      value)))
+              (funcall transform str-value)
+            str-value))
+      str-value)))
 
 (defun org-gamedb--add-property-values (results)
   "Add values from RESULTS for fields in `org-gamedb-property-fields'.
