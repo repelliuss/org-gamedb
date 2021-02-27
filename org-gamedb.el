@@ -68,7 +68,7 @@ be included in all resources."
 
 (defcustom org-gamedb-query-fields
   '((name)
-    (original_release_date :transform (lambda (v) (substring v 0 4))))
+    (original_release_date :transform (lambda (str) (substring str 0 4))))
   "Fetched fields for all queries.
 If there is more than one resource for a query, then user is prompted to select
 a resource from candidates. Candidates will have these fields as information
@@ -121,13 +121,13 @@ Otherwise always prompt the query and insert a new headline for query."
     (birth_date)
     (hometown)
     (install_base)
-    (gender :transform (lambda (v) (pcase v
-                                     ("1" "Male")
-                                     ("2" "Female")
-                                     (t "Other"))))
+    (gender :transform (lambda (str) (pcase str
+                                       ("1" "Male")
+                                       ("2" "Female")
+                                       (t "Other"))))
     (themes)
     (platform)
-    (date_founded :transform (lambda (v) (substring v 0 10)))
+    (date_founded :transform (lambda (str) (substring str 0 10)))
     (location_country :tag "Country")
     (location_city :tag "City")
     (birthday))
