@@ -366,7 +366,7 @@ a second request with selected resource's guid."
                                 (url-file-extension url))))
         (make-directory dir t)
         (url-copy-file url file-path t)
-        (insert (format "\n\n[[file:%s][Poster]]\n" file-path))))
+        (insert (format "\n\n[[file:%s][Image]]\n" file-path))))
     (if org-gamedb-display-image-after
         (org-display-inline-images t t beg (point)))))
 
