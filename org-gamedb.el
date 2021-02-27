@@ -112,7 +112,10 @@ Otherwise always prompt the query and insert a new headline for query."
     (birth_date)
     (hometown)
     (install_base)
-    (gender)
+    (gender :transform (lambda (v) (pcase v
+                                     ("1" "Male")
+                                     ("2" "Female")
+                                     (t "Other"))))
     (themes)
     (platform)
     (date_founded :transform (lambda (v) (substring v 0 10)))
