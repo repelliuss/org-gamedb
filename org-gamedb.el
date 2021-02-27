@@ -35,8 +35,6 @@
 (require 'org)
 (require 'seq)
 
-;; FIXME: deletes next headline
-;; FIXME: character properties thing string
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs org-mode."
   :group 'org
