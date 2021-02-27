@@ -6,7 +6,7 @@
 ;; Maintainer: repelliuss <repelliuss@gmail.com>
 ;; Created: February 17, 2021
 ;; Modified: February 17, 2021
-;; Version: 0.0.1
+;; Version: 0.9.0
 ;; Keywords: org, game, api
 ;; Homepage: https://github.com/repelliuss/org-gamedb
 
@@ -39,7 +39,7 @@
   "A Giant Bomb API client to work with Emacs org-mode."
   :group 'org
   :prefix "org-gamedb-"
-  :package-version '(Org-Gamedb . "0.0.1"))
+  :package-version '(Org-Gamedb . "0.9.0"))
 
 (defcustom org-gamedb-api-key nil
   "Giant Bomb API key.
