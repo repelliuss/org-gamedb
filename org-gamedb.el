@@ -509,12 +509,12 @@ one of them, insert each value in a plain list."
         (org-insert-heading-respect-content)
         (insert (format "%s\n" resource-name)))
       (org-back-to-heading-or-point-min)
+      (if org-gamedb-correct-headline
+          (org-edit-headline resource-name))
       (when org-gamedb-property-fields
         (org-gamedb--add-property-values results)
         (forward-line)
         (org-cycle))
-      (if org-gamedb-correct-headline
-          (org-edit-headline resource-name))
       (if (org-at-property-drawer-p)
           (re-search-forward org-property-end-re)
         (goto-char (point-at-eol)))
