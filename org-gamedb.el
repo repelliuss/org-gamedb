@@ -372,7 +372,8 @@ a second request with selected resource's guid."
 
 (defun org-gamedb--add-descriptor (descriptor)
   "Add DESCRIPTOR of resource to org headline."
-  (insert (format "\n%s\n" descriptor)))
+  (if descriptor
+    (insert (format "\n%s\n" descriptor))))
 
 (defun org-gamedb--get-field-tag (field-assoc rep)
   "Return tag of FIELD-ASSOC if there is, otherwise prettified field name.
