@@ -496,7 +496,7 @@ If `org-gamedb-plain-list-fields' is non-nil and there is a value for at least
 one of them, insert each value in a plain list."
   (let* ((at-heading (org-entry-get nil "ITEM"))
          (results (cdr (assq 'results data)))
-         (resource-name (cdr (assq 'name results))))
+         (resource-name (string-trim (cdr (assq 'name results)))))
     (when (or (not at-heading)
               org-gamedb-always-create-buffer)
       (pop-to-buffer "*Org GameDB*" nil)
