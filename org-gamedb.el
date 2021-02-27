@@ -66,15 +66,24 @@ be included in all resources."
                                     (choice (const 'asc)
                                             (const 'desc)))))
 
-(defcustom org-gamedb-query-fields '(name original_release_date)
+(defcustom org-gamedb-query-fields
+  '((name)
+    (original_release_date :transform (lambda (v) (substring v 0 4))))
   "Fetched fields for all queries.
 If there is more than one resource for a query, then user is prompted to select
 a resource from candidates. Candidates will have these fields as information
 seperated by variable `org-gamedb-field-seperator'.
 
-Available fields are whose value is a string.
-For available fields, see URL `https://www.giantbomb.com/api/documentation/'."
-  :type '(repeat :tag "Field" symbol))
+This is an association list where each association in the form of
+\(FIELD . PLIST\) . For available fields,
+see URL `https://www.giantbomb.com/api/documentation/'.
+PLIST may be empty or it may have `:transform' property that will be applied to
+each value of that field. This must be a function which takes 1
+argument and return a string."
+  :type '(alist :key-type (symbol :tag "Field")
+                :value-type (choice (plist :key-type (const :transform)
+                                           :value-type (function :tag "Transform Function"))
+                                    (const nil))))
 
 (defcustom org-gamedb-field-seperator " - "
   "Seperator for each field of a candidate."
@@ -131,7 +140,7 @@ This is an association list where each association in the form of
 see URL `https://www.giantbomb.com/api/documentation/'.
 PLIST may be empty or it may have a `:tag' property that will be replaced
 with name of the field and `:transform' property that will be applied to
-each value of that field. This must be a function which takes 1 string
+each value of that field. This must be a function which takes 1
 argument and return a string.
 
 It is recommended to pick common fields though it doesn't have to be included
@@ -280,24 +289,33 @@ A GUID is required if given resource is for search purposes, decided by
      singular)
     (plural (substring plural 0 (- (length plural) 1)))))
 
+
 (defun org-gamedb--mk-results-collection (results)
   "Construct descriptors for each of RESULTS.
 Return list of strings according to `org-gamedb-query-fields'."
   (mapcar (lambda (a-result)
-            (let ((info-str (cdr (assq (car org-gamedb-query-fields)
-                                       a-result))))
-              (dolist (field (cdr org-gamedb-query-fields) info-str)
+            (let ((info-str (org-gamedb--get-field-transformed-value
+                             (car org-gamedb-query-fields)
+                             (cdr (assq (caar org-gamedb-query-fields)
+                                        a-result)))))
+              (dolist (field-assoc (cdr org-gamedb-query-fields) info-str)
                 (setq info-str (concat info-str
                                        org-gamedb-field-seperator
-                                       (let ((val (cdr (assq field a-result))))
-                                         (if val val "N/A")))))))
+                                       (let ((val (cdr (assq (car field-assoc) a-result))))
+                                         (if val
+                                             (org-gamedb--get-field-transformed-value
+                                              field-assoc
+                                              val)
+                                           "N/A")))))))
           results))
 
 (defun org-gamedb--matching-value-choice-p (value choice)
   "Return t if VALUE and CHOICE match in meaning.
 If VALUE is nil, then CHOICE should be \"N/A\", otherwise
 they should be string equal."
-  (or (if (null value) (string= choice "N/A"))
+  (or (if (or (null value)
+              (string= value "nil"))
+          (string= choice "N/A"))
       (string= value choice)))
 
 (defun org-gamedb--get-guid (choice results)
@@ -306,20 +324,26 @@ they should be string equal."
     (cdr
      (assq 'guid
            (seq-find (lambda (a-result)
-                       (let ((field (car org-gamedb-query-fields))
+                       (let ((field-assoc (car org-gamedb-query-fields))
                              (rest-fields (cdr org-gamedb-query-fields))
                              (ch-value (car choice-values))
                              (rest-ch-values (cdr choice-values)))
                          (while (and rest-fields
                                      (org-gamedb--matching-value-choice-p
-                                      (cdr (assq field a-result)) ch-value))
-                           (setq field (car rest-fields)
+                                      (org-gamedb--get-field-transformed-value
+                                       field-assoc
+                                       (cdr (assq (car field-assoc) a-result)))
+                                      ch-value))
+                           (setq field-assoc (car rest-fields)
                                  rest-fields (cdr rest-fields)
                                  ch-value (car rest-ch-values)
                                  rest-ch-values (cdr rest-ch-values)))
                          (and (null rest-fields)
                               (org-gamedb--matching-value-choice-p
-                               (cdr (assq field a-result)) ch-value))))
+                               (org-gamedb--get-field-transformed-value
+                                field-assoc
+                                (cdr (assq (car field-assoc) a-result)))
+                               ch-value))))
                      results)))))
 
 (defun org-gamedb--prompt-results (results)
@@ -373,7 +397,7 @@ a second request with selected resource's guid."
 (defun org-gamedb--add-descriptor (descriptor)
   "Add DESCRIPTOR of resource to org headline."
   (if descriptor
-    (insert (format "\n%s\n" descriptor))))
+      (insert (format "\n%s\n" descriptor))))
 
 (defun org-gamedb--get-field-tag (field-assoc rep)
   "Return tag of FIELD-ASSOC if there is, otherwise prettified field name.
@@ -394,7 +418,7 @@ Apply transformation in FIELD-ASSOC to VALUE and return it if there is one,
 otherwise return VALUE itself."
   (let ((plist (cdr field-assoc))
         (str-value (format "%s" value)))
-    (if plist
+    (if (and plist value)
         (let ((transform (plist-get plist :transform)))
           (if transform
               (funcall transform str-value)
@@ -568,7 +592,7 @@ and will make a call to `org-gamedb--on-success-query'."
                                     (mapcar #'car org-gamedb-plain-list-fields))))
           (push #'org-gamedb--on-success-get cbargs))
       (setq field-list (org-gamedb--encode-field-list
-                        (cons 'guid org-gamedb-query-fields)))
+                        (cons 'guid (mapcar #'car org-gamedb-query-fields))))
       (push #'org-gamedb--on-success-query cbargs))
     (url-retrieve
      (org-gamedb--encode-url resource field-list query guid)
