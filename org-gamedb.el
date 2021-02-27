@@ -35,6 +35,8 @@
 (require 'org)
 (require 'seq)
 
+;; FIXME: deletes next headline
+;; FIXME: character properties thing string
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs org-mode."
   :group 'org
@@ -448,7 +450,7 @@ it in descriptor form. If there are values then insert them as sub-lists."
                   value)
           (kill-whole-line)))
        ((null value)
-        (delete-region (point-at-bol) (point-at-eol))))))
+        (delete-region (point-at-bol) (point))))))
   ;; When there is many async calls in one go,
   ;; `org-insert-heading-respect-content'
   ;; goes crazy with inserting blank lines. This just /tries/ to fix it.
