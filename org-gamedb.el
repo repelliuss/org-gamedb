@@ -83,34 +83,6 @@ argument and return a string."
                                            :value-type (function :tag "Transform Function"))
                                     (const nil))))
 
-(defcustom org-gamedb-field-seperator " - "
-  "Seperator for each field of a candidate."
-  :type 'string)
-
-(defcustom org-gamedb-filter-field "name"
-  "Field to filter query as a key.
-Search will be filtered by this field as a key and input as a value that is
-given by user. Currently only 'single filter' supported.
-
-Available values are fields.
-See URL `https://www.giantbomb.com/api/documentation/' for available fields.
-It is recommended to pick a common field like 'name' though it doesn't
-have to be included in all resources."
-  :type 'string)
-
-(defcustom org-gamedb-include-image t
-  "If non-nil, insert an image wherever possible."
-  :type 'boolean)
-
-(defcustom org-gamedb-use-org-headline t
-  "If non-nil, try to query with org headline.
-Otherwise always prompt the query and insert a new headline for query."
-  :type 'boolean)
-
-(defcustom org-gamedb-correct-headline t
-  "If non-nil, update the headline with the queried resource's name."
-  :type 'boolean)
-
 (defcustom org-gamedb-property-fields
   '((original_release_date :tag "Release")
     (developers)
@@ -163,6 +135,21 @@ except fields in this list will be inserted as plain list."
                                                                (function :tag "Transform Function")))
                                     (const nil))))
 
+(defcustom org-gamedb-filter-field "name"
+  "Field to filter query as a key.
+Search will be filtered by this field as a key and input as a value that is
+given by user. Currently only 'single filter' supported.
+
+Available values are fields.
+See URL `https://www.giantbomb.com/api/documentation/' for available fields.
+It is recommended to pick a common field like 'name' though it doesn't
+have to be included in all resources."
+  :type 'string)
+
+(defcustom org-gamedb-include-image t
+  "If non-nil, insert an image wherever possible."
+  :type 'boolean)
+
 (defcustom org-gamedb-image-type 'medium
   "Type of image inserted after a query.
 If `org-gamedb-include-image' is t then inserted image will be this type
@@ -182,8 +169,8 @@ thumb, tiny, original."
   "If non-nil, display inserted image after a query."
   :type 'boolean)
 
-(defcustom org-gamedb-include-descriptor t
-  "If non-nil, include a descriptor for queried resource."
+(defcustom org-gamedb-store-images-explicitly t
+  "If non-nil, store images at `org-gamedb-cache-dir-generator'."
   :type 'boolean)
 
 (defcustom org-gamedb-cache-dir-generator #'org-gamedb--get-cache-dir
@@ -191,8 +178,21 @@ thumb, tiny, original."
 Function must take no args and return a string."
   :type 'function)
 
-(defcustom org-gamedb-store-images-explicitly t
-  "If non-nil, store images at `org-gamedb-cache-dir-generator'."
+(defcustom org-gamedb-use-org-headline t
+  "If non-nil, try to query with org headline.
+Otherwise always prompt the query and insert a new headline for query."
+  :type 'boolean)
+
+(defcustom org-gamedb-correct-headline t
+  "If non-nil, update the headline with the queried resource's name."
+  :type 'boolean)
+
+(defcustom org-gamedb-field-seperator " - "
+  "Seperator for each field of a candidate."
+  :type 'string)
+
+(defcustom org-gamedb-include-descriptor t
+  "If non-nil, include a descriptor for queried resource."
   :type 'boolean)
 
 (defcustom org-gamedb-always-create-buffer nil
@@ -230,13 +230,6 @@ asynchronously, possible loss of headlines for queries."
   (seq-reduce (lambda (acc it)
                 (format "%s,%s" acc it))
               (cdr fields) (car fields)))
-
-(defun org-gamedb--require-guid-p (resource)
-  "Return t if RESOURCE requires a guid, otherwise nil.
-Giant Bomb API takes a guid most of the time if requested resource doesn't
-end with 's."
-  (not (or (eql (aref resource (- (length resource) 1)) ?s)
-           (string= "people" resource))))
 
 (defun org-gamedb--encode-candidate-sort ()
   "Return a proper sort value for request."
@@ -276,6 +269,13 @@ A GUID is required if given resource is for search purposes, decided by
             org-gamedb-filter-field
             filter-val)))
 
+(defun org-gamedb--require-guid-p (resource)
+  "Return t if RESOURCE requires a guid, otherwise nil.
+Giant Bomb API takes a guid most of the time if requested resource doesn't
+end with 's."
+  (not (or (eql (aref resource (- (length resource) 1)) ?s)
+           (string= "people" resource))))
+
 (defun org-gamedb--complement-resource (resource)
   "Take a plural RESOURCE and return its singular endpoint."
   (pcase resource
@@ -287,25 +287,6 @@ A GUID is required if given resource is for search purposes, decided by
      singular)
     (plural (substring plural 0 (- (length plural) 1)))))
 
-
-(defun org-gamedb--mk-results-collection (results)
-  "Construct descriptors for each of RESULTS.
-Return list of strings according to `org-gamedb-query-fields'."
-  (mapcar (lambda (a-result)
-            (let ((info-str (org-gamedb--get-field-transformed-value
-                             (car org-gamedb-query-fields)
-                             (cdr (assq (caar org-gamedb-query-fields)
-                                        a-result)))))
-              (dolist (field-assoc (cdr org-gamedb-query-fields) info-str)
-                (setq info-str (concat info-str
-                                       org-gamedb-field-seperator
-                                       (let ((val (cdr (assq (car field-assoc) a-result))))
-                                         (if val
-                                             (org-gamedb--get-field-transformed-value
-                                              field-assoc
-                                              val)
-                                           "N/A")))))))
-          results))
 
 (defun org-gamedb--matching-value-choice-p (value choice)
   "Return t if VALUE and CHOICE match in meaning.
@@ -343,6 +324,25 @@ they should be string equal."
                                 (cdr (assq (car field-assoc) a-result)))
                                ch-value))))
                      results)))))
+
+(defun org-gamedb--mk-results-collection (results)
+  "Construct descriptors for each of RESULTS.
+Return list of strings according to `org-gamedb-query-fields'."
+  (mapcar (lambda (a-result)
+            (let ((info-str (org-gamedb--get-field-transformed-value
+                             (car org-gamedb-query-fields)
+                             (cdr (assq (caar org-gamedb-query-fields)
+                                        a-result)))))
+              (dolist (field-assoc (cdr org-gamedb-query-fields) info-str)
+                (setq info-str (concat info-str
+                                       org-gamedb-field-seperator
+                                       (let ((val (cdr (assq (car field-assoc) a-result))))
+                                         (if val
+                                             (org-gamedb--get-field-transformed-value
+                                              field-assoc
+                                              val)
+                                           "N/A")))))))
+          results))
 
 (defun org-gamedb--prompt-results (results)
   "Prompt RESULTS to user and return its guid.
