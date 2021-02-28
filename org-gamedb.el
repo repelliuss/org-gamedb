@@ -202,9 +202,9 @@ Otherwise always prompt the query and insert a new headline for query."
 (defcustom org-gamedb-always-insert-heading nil
   "If non-nil, always insert a new heading for resource contents.
 If user will make repetitive async queries in one go, then this is recommended
-to be set t, preferably lexically in custom function. This is because if user
-is in an org headline, then all query results will be inserted to that headline
-asynchronously, possible loss of headlines for queries."
+to be set t. This is because if user is in an org headline, then all query
+results will be inserted to that headline asynchronously, possible
+loss of headlines for queries."
   :type 'boolean)
 
 (defcustom org-gamedb-value-treshold 100
