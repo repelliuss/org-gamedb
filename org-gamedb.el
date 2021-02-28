@@ -547,7 +547,7 @@ one of them, insert each value in a plain list."
         (forward-line)
         (if (org-at-property-drawer-p)
             (org-cycle)
-          (forward-line -1)))
+          (org-back-to-heading-or-point-min)))
       (if (org-at-property-drawer-p)
           (re-search-forward org-property-end-re)
         (goto-char (point-at-eol)))
