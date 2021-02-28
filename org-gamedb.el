@@ -502,12 +502,12 @@ it in descriptor form. If there are values then insert them as sub-lists."
 This function is called after a successfull query and responsible function to
 insert queried resource's values.
 
-If cursor is not inside an org headline or `org-gamedb-always-create-buffer'
+If current `major-mode' is not `org-mode' or `org-gamedb-always-create-buffer'
 is non-nil, create a buffer named \"*Org GameDB*\" in `org-mode' and insert
 values there appropriately.
 
 If `org-gamedb-always-insert-heading' is non-nil, `org-gamedb-use-org-headline'
-is nil or cursor is in \"*Org GameDB*\" buffer but not in a headline, then
+is nil or cursor is not in a org headline, then
 insert a new headline with name of the resource and insert values there
 appropriately.
 
@@ -528,13 +528,12 @@ one of them, insert each value in a plain list."
   (let* ((at-heading (org-entry-get nil "ITEM"))
          (results (cdr (assq 'results data)))
          (resource-name (string-trim (cdr (assq 'name results)))))
-    (when (or (not at-heading)
+    (when (or (not (eq major-mode 'org-mode))
               org-gamedb-always-create-buffer)
       (pop-to-buffer "*Org GameDB*" nil)
       (org-mode))
     (save-excursion
-      (when (or (and (string= (buffer-name (current-buffer))  "*Org GameDB*")
-                     (not at-heading))
+      (when (or (not at-heading)
                 (not org-gamedb-use-org-headline)
                 org-gamedb-always-insert-heading)
         (org-insert-heading-respect-content)
