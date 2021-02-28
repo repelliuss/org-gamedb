@@ -507,8 +507,8 @@ is non-nil, create a buffer named \"*Org GameDB*\" in `org-mode' and insert
 values there appropriately.
 
 If `org-gamedb-always-insert-heading' is non-nil, `org-gamedb-use-org-headline'
-is nil or cursor is not in a org headline, then
-insert a new headline with name of the resource and insert values there
+is nil, current buffer is \"*Org GameDB*\" or cursor is not in a org headline,
+then insert a new headline with name of the resource and insert values there
 appropriately.
 
 If `org-gamedb-property-fields' is non-nil and there is a value for at least
@@ -534,6 +534,7 @@ one of them, insert each value in a plain list."
       (org-mode))
     (save-excursion
       (when (or (not at-heading)
+                (string= (buffer-name (current-buffer))  "*Org GameDB*")
                 (not org-gamedb-use-org-headline)
                 org-gamedb-always-insert-heading)
         (org-insert-heading-respect-content)
