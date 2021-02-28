@@ -536,7 +536,9 @@ one of them, insert each value in a plain list."
       (when org-gamedb-property-fields
         (org-gamedb--add-property-values results)
         (forward-line)
-        (org-cycle))
+        (if (org-at-property-drawer-p)
+            (org-cycle)
+          (forward-line -1)))
       (if (org-at-property-drawer-p)
           (re-search-forward org-property-end-re)
         (goto-char (point-at-eol)))
