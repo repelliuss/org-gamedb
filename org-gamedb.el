@@ -383,18 +383,19 @@ a second request with selected resource's guid."
 
 (defun org-gamedb--insert-image (url name)
   "Insert image of queried resource from URL with its NAME as description."
-  (let ((beg (point)))
-    (if (not org-gamedb-store-images-explicitly)
-        (insert (format "\n\n[[%s][Image]]\n" url))
-      (let* ((dir (funcall org-gamedb-cache-dir-generator))
-             (file-path (concat dir
-                                name
-                                (url-file-extension url))))
-        (make-directory dir t)
-        (url-copy-file url file-path t)
-        (insert (format "\n\n[[file:%s][Image]]\n" file-path))))
-    (if org-gamedb-display-image-after
-        (org-display-inline-images t t beg (point)))))
+  (if url
+      (let ((beg (point)))
+        (if (not org-gamedb-store-images-explicitly)
+            (insert (format "\n\n[[%s][Image]]\n" url))
+          (let* ((dir (funcall org-gamedb-cache-dir-generator))
+                 (file-path (concat dir
+                                    name
+                                    (url-file-extension url))))
+            (make-directory dir t)
+            (url-copy-file url file-path t)
+            (insert (format "\n\n[[file:%s][Image]]\n" file-path))))
+        (if org-gamedb-display-image-after
+            (org-display-inline-images t t beg (point))))))
 
 (defun org-gamedb--add-descriptor (descriptor)
   "Add DESCRIPTOR of resource to org headline."
