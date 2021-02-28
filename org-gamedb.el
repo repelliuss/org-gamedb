@@ -207,6 +207,10 @@ is in an org headline, then all query results will be inserted to that headline
 asynchronously, possible loss of headlines for queries."
   :type 'boolean)
 
+(defcustom org-gamedb-value-treshold 100
+  "If non-nil, insert this many values at max."
+  :type 'integer)
+
 (defconst org-gamedb--api-url "https://www.giantbomb.com/api/"
   "Base URL of API.")
 
@@ -445,7 +449,9 @@ Create a property drawer and seperate each value with a comma then blank."
                         (format "%s, " (org-gamedb--get-field-transformed-value
                                         field-assoc
                                         (cdr (assq 'name a-value-assoc)))))
-                      value
+                      (if (null org-gamedb-value-treshold)
+                          value
+                        (seq-take value org-gamedb-value-treshold))
                       'string))))))))
 
 (defun org-gamedb--add-plain-list-values (results)
@@ -474,7 +480,9 @@ it in descriptor form. If there are values then insert them as sub-lists."
                              field-assoc
                              (cdr (assq 'name a-value-assoc))))
                     (org-insert-item))
-                  value)
+                  (if (null org-gamedb-value-treshold)
+                      value
+                    (seq-take value org-gamedb-value-treshold)))
           (kill-whole-line)))
        ((null value)
         (delete-region (point-at-bol) (point))))))
