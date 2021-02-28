@@ -221,8 +221,8 @@ asynchronously, possible loss of headlines for queries."
   '(accessories
     characters companies concepts dlcs games
     game_ratings locations objects people platforms promos
-    rating_boards regions releases reviews themes user_reviews
-    videos video_categories video_shows)
+    rating_boards regions releases reviews user_reviews
+    videos video_categories)
   "List of resources to query.")
 
 (defun org-gamedb--get-cache-dir ()
