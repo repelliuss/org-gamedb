@@ -625,7 +625,7 @@ called in different scope than you might expect."
      'silent
      'inhibit-cookies)))
 
-(defun org-gamedb--mk-query (resource query &optional varlist)
+(defun org-gamedb-make-query (resource query &optional varlist)
   "Make a QUERY to RESOURCE with lexical bindings in VARLIST.
 QUERY is a string and can be anything. Example queries are \"quantic\" for
 companies and \"stardew\" for games.
@@ -667,7 +667,7 @@ Don't forget to set an API key first. See `org-gamedb-get-api-key'."
                           org-gamedb--resource-list
                           nil t)
          (org-gamedb--get-query)))
-  (org-gamedb--mk-query resource query))
+  (org-gamedb-make-query resource query))
 
 ;;;###autoload
 (defun org-gamedb-games-query (query)
@@ -680,7 +680,7 @@ If you don't know what to query, just make an empty query!
 Don't forget to set an API key. See `org-gamedb-get-api-key'."
   (interactive
    (list (org-gamedb--get-query)))
-  (org-gamedb--mk-query "games" query))
+  (org-gamedb-make-query "games" query))
 
 ;;;###autoload
 (defun org-gamedb-get-api-key ()
