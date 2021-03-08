@@ -359,14 +359,16 @@ Each resource appears according to `org-gamedb-query-fields' and
                       nil t)
      results)))
 
-(defun org-gamedb--on-success-query (data resource)
+(defun org-gamedb--on-success-query (data resource varlist)
   "Handle success DATA taken from RESOURCE endpoint.
 If there is no result notify it.
 If there is one result then gets its GUID and make a second request to get
 values for `org-gamedb-property-fields'.
 If there is more than one result then prompt user to select one with each
 resource in the form according to `org-gamedb-query-fields'. Then make
-a second request with selected resource's guid."
+a second request with selected resource's guid.
+
+VARLIST is redirected to `org-gamedb--mk-request'."
   (let ((results-count (cdr (assq 'number_of_total_results data)))
         (results (cdr (assq 'results data))))
     (cond
@@ -375,11 +377,13 @@ a second request with selected resource's guid."
                            (org-gamedb--complement-resource resource)
                            'get
                            nil
-                           (cdr (assq 'guid (aref results 0)))))
+                           (cdr (assq 'guid (aref results 0)))
+                           varlist))
      (t (org-gamedb--mk-request (org-gamedb--complement-resource resource)
                                 'get
                                 nil
-                                (org-gamedb--prompt-results results))))))
+                                (org-gamedb--prompt-results results)
+                                varlist)))))
 
 (defun org-gamedb--insert-image (url name)
   "Insert image of queried resource from URL with its NAME as description."
@@ -497,7 +501,7 @@ it in descriptor form. If there are values then insert them as sub-lists."
       (kill-whole-line)
       (forward-line -1))))
 
-(defun org-gamedb--on-success-get (data _)
+(defun org-gamedb--on-success-get (data _ __)
   "Parse DATA and insert values to a org headline.
 This function is called after a successfull query and responsible function to
 insert queried resource's values.
@@ -564,7 +568,7 @@ one of them, insert each value in a plain list."
       (when org-gamedb-plain-list-fields
         (org-gamedb--add-plain-list-values results)))))
 
-(defun org-gamedb--handle-request (status callback resource excursion)
+(defun org-gamedb--handle-request (status callback resource excursion varlist)
   "Handle request errors and let control to CALLBACK on success.
 STATUS is response to a request returned by `url-retrieve' functions.
 
@@ -580,10 +584,12 @@ and RESOURCE endpoint to the request."
             (with-current-buffer (car excursion) ; restore user's buffer
               (save-excursion
                 (goto-char (cdr excursion))         ; goto point where query called
-                (funcall callback data resource)))
+                (eval `(let ,varlist
+                         (funcall #',callback ',data ,resource ',varlist))
+                      t)))
           (error (assq 'error data)))))))
 
-(defun org-gamedb--mk-request (resource type &optional query guid)
+(defun org-gamedb--mk-request (resource type &optional query guid varlist)
   "Make a request to RESOURCE endpoint.
 If TYPE is symbol `get' then a GUID is required. This request will try to get
 a single item asynchronously and will make a call to
@@ -591,10 +597,17 @@ a single item asynchronously and will make a call to
 
 Otherwise a QUERY required. This request will try to get all results with
 `org-gamedb-filter-field' and QUERY as its value to do filtering asyncronously
-and will make a call to `org-gamedb--on-success-query'."
+and will make a call to `org-gamedb--on-success-query'.
+
+VARLIST is in the same form as in `let'. Use VARLIST if you want
+lexical binding. Lexical bindings in VARLIST is guarenteed to take effect.
+VARLIST is a list, each element of which is either a symbol
+by itself or a two-element list, the first element of which is a symbol.
+This is required due to async requests. Simply, a callback function is being
+called in different scope than you might expect."
   (let ((url-request-method "GET")
         (field-list)
-        (cbargs `(,resource (,(current-buffer) . ,(point)))))
+        (cbargs `(,resource (,(current-buffer) . ,(point)) ,varlist)))
     (if (eq type 'get)
         (progn
           (setq field-list (org-gamedb--encode-field-list
@@ -611,6 +624,22 @@ and will make a call to `org-gamedb--on-success-query'."
      cbargs
      'silent
      'inhibit-cookies)))
+
+(defun org-gamedb--mk-query (resource query &optional varlist)
+  "Make a QUERY to RESOURCE with lexical bindings in VARLIST.
+QUERY is a string and can be anything. Example queries are \"quantic\" for
+companies and \"stardew\" for games.
+
+RESOURCE is a resource defined by API. See available resources at
+URL `https://www.giantbomb.com/api/documentation/'.
+
+VARLIST is in the same form as in `let'. Use VARLIST if you want
+lexical binding. Lexical bindings in VARLIST is guarenteed to take effect.
+VARLIST is a list, each element of which is either a symbol
+by itself or a two-element list, the first element of which is a symbol.
+This is required due to async requests. Simply, a callback function is being
+called in different scope than you might expect."
+  (org-gamedb--mk-request resource 'query query nil varlist))
 
 (defun org-gamedb--get-query ()
   "Return input query for the next resource query."
@@ -638,7 +667,7 @@ Don't forget to set an API key first. See `org-gamedb-get-api-key'."
                           org-gamedb--resource-list
                           nil t)
          (org-gamedb--get-query)))
-  (org-gamedb--mk-request resource 'query query))
+  (org-gamedb--mk-query resource query))
 
 ;;;###autoload
 (defun org-gamedb-games-query (query)
@@ -651,7 +680,7 @@ If you don't know what to query, just make an empty query!
 Don't forget to set an API key. See `org-gamedb-get-api-key'."
   (interactive
    (list (org-gamedb--get-query)))
-  (org-gamedb--mk-request "games" 'query query))
+  (org-gamedb--mk-query "games" query))
 
 ;;;###autoload
 (defun org-gamedb-get-api-key ()
