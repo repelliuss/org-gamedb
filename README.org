@@ -86,11 +86,9 @@ For details and more, see their documentation strings.
 - =org-gamedb-always-create-buffer=: If non-nil, always create a new buffer for resource contents. Default =nil=.
 - =org-gamedb-always-insert-heading=: If non-nil, always insert a new heading for resource contents. Default =nil=.
 * Multiple Queries
-If you want to query many things at one go, set =org-gamedb-always-insert-heading= to =t=, preferably temporarily. This is because if user is in an org headline, then all query
-results will be inserted to that headline asynchronously, possible
-loss of headlines for queries.
+If you want to query many things at one go, set =org-gamedb-always-insert-heading= to =t=, preferably lexically, see [[*Tips][Tips]]. This is because if user is in an org headline, then all query results will be inserted to that headline asynchronously which will lose headlines of queries.
 
-Then try,
+Then try this if you set =org-gamedb-always-insert-heading= to =t=, or use your custom function.
 #+begin_src elisp
 (mapc #'org-gamedb-games-query '("undertale" "cyberpunk" "hades" "celeste"))
 #+end_src
@@ -103,7 +101,7 @@ Then try,
   "Make a QUERY to companies resource."
   (interactive
    (list (org-gamedb--get-query)))
-  (org-gamedb--mk-request "companies" 'query query))
+  (org-gamedb-make-query "companies" query))
   #+end_src
 - If you don't want to use org headline /sometimes/. You can do this,
 
@@ -116,12 +114,19 @@ Then try,
                           nil t)
          (let ((org-gamedb-use-org-headline nil))
            (org-gamedb--get-query))))
-  (org-gamedb--mk-request resource 'query query))
+  (org-gamedb-make-request resource query))
   #+end_src
-- Integrate =org-capture= to your workflow.
+- If you want to have temporarily different behavior, define your own query similar to this,
+  #+begin_src elisp
+(defun my-org-gamedb-query (query)
+  "Make a QUERY to games resource."
+  (interactive
+   (list (org-gamedb--get-query)))
+  (org-gamedb-make-query "games" query '((org-gamedb-always-insert-heading t)
+                                         (org-gamedb-display-image-after nil))))
+  #+end_src
 * Limitations
 - Currently only supports single filtering. But it is not that bad as it sounds if you are using a completion system.
-- All customizations apply to all queries. Since calls are asynchronous, lexical binding doesn't help for some(?) variables. Though, you can define functions that saves old value and restores afterwards.
 - Doesn't support advanced queries.
 * Why Giant Bomb?
 Because taking an API key is /easier/. I considered IGDB but it needed to create a Twitch account, registering an Twitch app, then making a request. They support client-credentials flow. So even each user of this package doesn't register a dummy app, I have to serve some sort of easy method to give an API key. I considered a serverless method but didn't want to pay its extra work and cost. Feel free to inform me for a good way.

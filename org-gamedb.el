@@ -6,7 +6,7 @@
 ;; Maintainer: repelliuss <repelliuss@gmail.com>
 ;; Created: February 17, 2021
 ;; Modified: February 17, 2021
-;; Version: 0.9.0
+;; Version: 1.0.0
 ;; Keywords: org, game, api
 ;; Homepage: https://github.com/repelliuss/org-gamedb
 
