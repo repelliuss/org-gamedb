@@ -387,10 +387,9 @@ VARLIST is redirected to `org-gamedb--mk-request'."
 
 (defun org-gamedb--insert-image (url name)
   "Insert image of queried resource from URL with its NAME as description."
-  (if url
-      (let ((beg (point)))
-        (if (not org-gamedb-store-images-explicitly)
-            (insert (format "\n\n[[%s][Image]]\n" url))
+  (when url
+    (let ((beg (point)))
+      (if org-gamedb-store-images-explicitly
           (let* ((dir (funcall org-gamedb-cache-dir-generator))
                  (ext (url-file-extension url))
                  (file-path (concat dir
@@ -401,14 +400,15 @@ VARLIST is redirected to `org-gamedb--mk-request'."
             (make-directory dir t)
             (unless (file-exists-p file-path)
               (url-copy-file url file-path t))
-            (insert (format "\n\n[[file:%s][Image]]\n" file-path))))
-        (if org-gamedb-display-image-after
-            (org-display-inline-images t t beg (point))))))
+            (insert (format "\n\n[[file:%s][Image]]\n" file-path)))
+        (insert (format "\n\n[[%s][Image]]\n" url)))
+      (when org-gamedb-display-image-after
+        (org-display-inline-images t t beg (point))))))
 
 (defun org-gamedb--add-descriptor (descriptor)
   "Add DESCRIPTOR of resource to org headline."
-  (if descriptor
-      (insert (format "\n%s\n" descriptor))))
+  (when descriptor
+    (insert (format "\n%s\n" descriptor))))
 
 (defun org-gamedb--get-field-tag (field-assoc rep)
   "Return tag of FIELD-ASSOC if there is, otherwise prettified field name.
@@ -458,9 +458,9 @@ Create a property drawer and seperate each value with a comma then blank."
                         (format "%s, " (org-gamedb--get-field-transformed-value
                                         field-assoc
                                         (cdr (assq 'name a-value-assoc)))))
-                      (if (null org-gamedb-value-treshold)
-                          value
-                        (seq-take value org-gamedb-value-treshold))
+                      (if org-gamedb-value-treshold
+                          (seq-take value org-gamedb-value-treshold)
+                        value)
                       'string))))))))
 
 (defun org-gamedb--add-plain-list-values (results)
@@ -498,8 +498,8 @@ it in descriptor form. If there are values then insert them as sub-lists."
   ;; When there is many async calls in one go,
   ;; `org-insert-heading-respect-content'
   ;; goes crazy with inserting blank lines. This just /tries/ to fix it.
-  (if (= (point-max) (point))
-      (forward-line -1))
+  (when (= (point-max) (point))
+    (forward-line -1))
   (unless (= (point-max) (point))
     (while (= (point-at-bol) (point-at-eol))
       (kill-whole-line)
@@ -549,8 +549,8 @@ one of them, insert each value in a plain list."
         (insert (format "%s\n" resource-name))
         (forward-line -1))
       (org-back-to-heading-or-point-min)
-      (if org-gamedb-correct-headline
-          (org-edit-headline resource-name))
+      (when org-gamedb-correct-headline
+        (org-edit-headline resource-name))
       (when org-gamedb-property-fields
         (org-gamedb--add-property-values results)
         (let ((cur (point)))
@@ -561,12 +561,12 @@ one of them, insert each value in a plain list."
       (if (org-at-property-drawer-p)
           (re-search-forward org-property-end-re)
         (goto-char (point-at-eol)))
-      (if org-gamedb-include-image
+      (when org-gamedb-include-image
           (org-gamedb--insert-image
            (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
                       (cdr (assq 'image results))))
            resource-name))
-      (if org-gamedb-include-descriptor
+      (when org-gamedb-include-descriptor
           (org-gamedb--add-descriptor
            (cdr (assq 'deck results))))
       (when org-gamedb-plain-list-fields
