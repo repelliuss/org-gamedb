@@ -36,7 +36,7 @@
 (require 'seq)
 
 (defgroup org-gamedb nil
-  "A Giant Bomb API client to work with Emacs org-mode."
+  "A Giant Bomb API client to work with Emacs `org-mode'."
   :group 'org
   :prefix "org-gamedb-"
   :package-version '(Org-Gamedb . "0.9.0"))
