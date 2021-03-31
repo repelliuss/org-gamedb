@@ -399,7 +399,8 @@ VARLIST is redirected to `org-gamedb--mk-request'."
                                         ".jpg" ; guessing image type
                                       ext))))
             (make-directory dir t)
-            (url-copy-file url file-path t)
+            (unless (file-exists-p file-path)
+              (url-copy-file url file-path t))
             (insert (format "\n\n[[file:%s][Image]]\n" file-path))))
         (if org-gamedb-display-image-after
             (org-display-inline-images t t beg (point))))))
