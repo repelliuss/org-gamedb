@@ -392,9 +392,12 @@ VARLIST is redirected to `org-gamedb--mk-request'."
         (if (not org-gamedb-store-images-explicitly)
             (insert (format "\n\n[[%s][Image]]\n" url))
           (let* ((dir (funcall org-gamedb-cache-dir-generator))
+                 (ext (url-file-extension url))
                  (file-path (concat dir
                                     name
-                                    (url-file-extension url))))
+                                    (if (string-empty-p ext)
+                                        ".jpg" ; guessing image type
+                                      ext))))
             (make-directory dir t)
             (url-copy-file url file-path t)
             (insert (format "\n\n[[file:%s][Image]]\n" file-path))))
