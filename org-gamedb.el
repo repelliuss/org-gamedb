@@ -32,10 +32,11 @@
 
 ;;; Code:
 
-(require 'json)
-(require 'url)
 (require 'org)
+(require 'url)
+(require 'json)
 (require 'seq)
+(require 'outline)
 
 (defgroup org-gamedb nil
   "A Giant Bomb API client to work with Emacs `org-mode'."
@@ -550,27 +551,32 @@ one of them, insert each value in a plain list."
         (org-insert-heading-respect-content)
         (insert (format "%s\n" resource-name))
         (forward-line -1))
-      (org-back-to-heading-or-point-min)
+      (condition-case nil
+          (outline-back-to-heading t)
+        (error
+         (goto-char (point-min))))
       (when org-gamedb-correct-headline
         (org-edit-headline resource-name))
       (when org-gamedb-property-fields
         (org-gamedb--add-property-values results)
         (let ((cur (point)))
-          (forward-line)
-          (if (org-at-property-drawer-p)
-              (org-cycle)
-            (goto-char cur))))
-      (if (org-at-property-drawer-p)
+          (forward-line 2)
+          (if (not (org-at-property-p))
+              (goto-char cur)
+            (forward-line -1)
+            (org-cycle)
+            (forward-line))))
+      (if (org-at-property-p)
           (re-search-forward org-property-end-re)
         (goto-char (point-at-eol)))
       (when org-gamedb-include-image
-          (org-gamedb--insert-image
-           (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
-                      (cdr (assq 'image results))))
-           resource-name))
+        (org-gamedb--insert-image
+         (cdr (assq (intern (format "%s_url" org-gamedb-image-type))
+                    (cdr (assq 'image results))))
+         resource-name))
       (when org-gamedb-include-descriptor
-          (org-gamedb--add-descriptor
-           (cdr (assq 'deck results))))
+        (org-gamedb--add-descriptor
+         (cdr (assq 'deck results))))
       (when org-gamedb-plain-list-fields
         (org-gamedb--add-plain-list-values results)))))
 
