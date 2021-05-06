@@ -114,7 +114,7 @@ Then try this if you set =org-gamedb-always-insert-heading= to =t=, or use your 
                           nil t)
          (let ((org-gamedb-use-org-headline nil))
            (org-gamedb--get-query))))
-  (org-gamedb-make-request resource query))
+  (org-gamedb-make-query resource query))
   #+end_src
 - If you want to have temporarily different behavior, define your own query similar to this,
   #+begin_src elisp
