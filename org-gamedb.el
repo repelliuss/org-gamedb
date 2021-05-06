@@ -593,9 +593,9 @@ and RESOURCE endpoint to the request."
     (error "Missing headers, bad response!"))
    (t (let ((data (json-read)))
         (if (= (cdr (assq 'status_code data)) 1)
-            (with-current-buffer (car excursion) ; restore user's buffer
+            (with-current-buffer (car excursion)        ; restore user's buffer
               (save-excursion
-                (goto-char (cdr excursion))         ; goto point where query called
+                (goto-char (cdr excursion))             ; goto point where query called
                 (eval `(let ,varlist
                          (funcall #',callback ',data ,resource ',varlist))
                       t)))
