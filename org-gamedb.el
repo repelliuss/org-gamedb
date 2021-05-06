@@ -5,9 +5,10 @@
 ;; Author: repelliuss <https://github.com/repelliuss>
 ;; Maintainer: repelliuss <repelliuss@gmail.com>
 ;; Created: February 17, 2021
-;; Modified: February 17, 2021
+;; Modified: May 6, 2021
 ;; Version: 1.0.0
-;; Keywords: org, game, api
+;; Package-Requires: ((emacs "25.1"))
+;; Keywords: outlines, org, games, api
 ;; Homepage: https://github.com/repelliuss/org-gamedb
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -25,8 +26,9 @@
 
 ;;; Commentary:
 
-;;  A game API client to work with Emacs org-mode. Current API is provided
-;;  by Giant Bomb. See https://www.giantbomb.com/.
+;;  A game API client to work with Emacs org-mode. Search for games, companies
+;;  and more. Get their statistics and log your gaming.
+;;  Current API is provided by Giant Bomb. See https://www.giantbomb.com/.
 
 ;;; Code:
 
