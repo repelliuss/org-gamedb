@@ -289,9 +289,8 @@ end with 's."
     ((pred (string-match "people"))
      "person")
     ((and (pred (string-match "\\(.+\\)ies\\'"))
-          (app (match-string 1) singular-root)
-          (let singular (concat singular-root "y")))
-     singular)
+          (app (match-string 1) singular-root))
+     (concat singular-root "y"))
     (plural (substring plural 0 (- (length plural) 1)))))
 
 
