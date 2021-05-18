@@ -178,7 +178,8 @@ thumb, tiny, original."
 
 (defcustom org-gamedb-cache-dir-generator #'org-gamedb--get-cache-dir
   "Function that will return a path to cache directory.
-Function must take no args and return a string."
+Function must take no args and return a string. Returned path is
+expanded with `expand-file-name' before used."
   :type 'function)
 
 (defcustom org-gamedb-use-org-headline t
@@ -392,7 +393,7 @@ VARLIST is redirected to `org-gamedb--mk-request'."
   (when url
     (let ((beg (point)))
       (if org-gamedb-store-images-explicitly
-          (let* ((dir (funcall org-gamedb-cache-dir-generator))
+          (let* ((dir (expand-file-name (funcall org-gamedb-cache-dir-generator)))
                  (ext (url-file-extension url))
                  (file-path (concat dir
                                     name
