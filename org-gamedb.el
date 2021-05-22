@@ -42,7 +42,7 @@
   "A Giant Bomb API client to work with Emacs `org-mode'."
   :group 'org
   :prefix "org-gamedb-"
-  :package-version '(Org-Gamedb . "0.9.0"))
+  :package-version '(Org-Gamedb . "1.0.0"))
 
 (defcustom org-gamedb-api-key nil
   "Giant Bomb API key.
