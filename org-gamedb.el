@@ -1,4 +1,4 @@
-;;; org-gamedb.el --- A game API client to work with org-mode -*- lexical-binding: t; -*-
+;;; org-gamedb.el --- Track video games in org-mode with giantbomb.com's API -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2021 repelliuss
 
@@ -8,7 +8,7 @@
 ;; Modified: May 6, 2021
 ;; Version: 1.0.0
 ;; Package-Requires: ((emacs "25.1"))
-;; Keywords: outlines, org, games, api
+;; Keywords: outlines, org, games, convenience, api
 ;; Homepage: https://github.com/repelliuss/org-gamedb
 
 ;; This program is free software: you can redistribute it and/or modify
@@ -26,9 +26,17 @@
 
 ;;; Commentary:
 
-;;  A game API client to work with Emacs org-mode. Search for games, companies
-;;  and more. Get their statistics and log your gaming.
-;;  Current API is provided by Giant Bomb. See https://www.giantbomb.com/.
+;;  org-gamedb allows you to make queries for certain resources like games,
+;;  characters, companies and extracts customizable properties from result like
+;;  when it is released, who published it and what genre it is. You can ask a summary and
+;;  also a cover art. org-gamedb nicely inserts them in an org headline. If you are on an
+;;  org buffer, org-gamedb tries to utilize it for example using current headline as your query.
+;;  Otherwise it creates a new buffer. In case there are multiple results,
+;;  you will be asked to select one amongst candidates.
+;;
+;;  If you don't know what to query, make an empty query!
+;;
+;;  For further details, refer to the homepage.
 
 ;;; Code:
 
