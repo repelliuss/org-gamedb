@@ -4,7 +4,7 @@
 - [[#demo][Demo]]
 - [[#general-info][General Info]]
 - [[#installation][Installation]]
-  - [[#quelpa-use-package][quelpa-use-package]]
+  - [[#melpa][MELPA]]
   - [[#doom-emacs][Doom Emacs]]
 - [[#grab-an-api-key][Grab an API Key]]
 - [[#usage][Usage]]
@@ -32,23 +32,21 @@ Possible use cases may be,
 - If you are a game developer and want to find implementations of some locations or objects.
 - and your imagination!
 
-Feel free to open issues. Even for discussing things, requesting features, unexpected behaviours...
+Feel free to open issues. Even for discussing things, requesting features, unexpected behaviours.
 * Installation
-** quelpa-use-package
+** MELPA
+org-gamedb is available on [[https://github.com/melpa/melpa][MELPA]].
 #+begin_src elisp
-(use-package org-gamedb
-  :defer t
-  :quelpa (org-gamedb
-           :fetcher github
-           :repo "repelliuss/org-gamedb")
-  :config
-  (setq org-gamedb-api-key "YOUR-API-KEY"))
+M-x package-install
+#+end_src
+In your =init.el=,
+#+begin_src elisp
+(setq org-gamedb-api-key "YOUR-API-KEY")
 #+end_src
 ** Doom Emacs
 In your =packages.el=,
 #+begin_src elisp
-(package! org-gamedb
-  :recipe (:host github :repo "repelliuss/org-gamedb"))
+(package! org-gamedb)
 #+end_src
 In your =config.el=,
 #+begin_src elisp
